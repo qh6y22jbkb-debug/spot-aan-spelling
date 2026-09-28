@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot aan op het werkwoord!</title>
+<!--
+=====================================================================
+  SPOT AAN OP HET WERKWOORD!  –  spellingsgame groep 7-8
+  Persoonsvorm verleden tijd van zwakke werkwoorden (ik-vorm + te/de).
+  Eén bestand, werkt offline. Openen: dubbelklik op dit bestand.
+
+  ── VOOR DE LEERKRACHT: WOORDEN TOEVOEGEN ──────────────────────────
+  Zoek hieronder naar  const WOORDEN = [  en voeg een regel toe, bijv.:
+
+  { infinitief:"poetsen", ikVorm:"poets", uitgang:"te", verledenTijdEnkelvoud:"poetste",
+    verledenTijdMeervoud:"poetsten", niveau:1, uitleg:"",
+    zinnen:[ { zin:"De conciërge ___ de spots.", mv:false } ] },
+
+  • uitgang   : "te" of "de" (zonder n; de game zet er zelf -n bij voor meervoud)
+  • niveau    : 1 = alleen te/ten, 2 = ook de/den, 3 = expert (lastige woorden)
+  • uitleg    : extra tip die bij de redenering verschijnt (mag leeg: "")
+  • zinnen    : 1 of 2 zinnen met ___ op de plek van de persoonsvorm.
+                mv:false = enkelvoud (ik/jij/hij/zij/het) → -te/-de
+                mv:true  = meervoud (wij/jullie/zij)     → -ten/-den
+  • letter    : (alleen nodig bij v/z-woorden zoals reizen/geloven)
+                de letter uit het hele werkwoord waar 't kofschip naar kijkt,
+                bijv. letter:"z" voor reizen → reisde.
+  • Gebruik ALLEEN zwakke werkwoorden (dus niet lopen → liep).
+  • Schrijf alle vormen zelf helemaal uit. Het spel controleert bij het
+    openen of alles klopt: druk F12 → Console en kijk bij "Spot aan – tests".
+    Of open het bestand met  ?test  achter de adresregel.
+
+  Foutenjacht-teksten staan in  const VERHALEN = [ . Een werkwoord zet je
+  tussen accolades: {fietsen|mv} of {groeten|ev}. Dat werkwoord moet ook in
+  WOORDEN staan.
+=====================================================================
+-->
+<style>
+@property --sx { syntax: '<length>'; inherits: true; initial-value: 500px; }
+@property --sy { syntax: '<length>'; inherits: true; initial-value: 300px; }
+@property --sr { syntax: '<length>'; inherits: true; initial-value: 2000px; }
+
+:root {
+  --bg: #170d24;
+  --stage: #26163a;
+  --stage2: #1c1030;
+  --plank: #5a3418;
+  --card: #fff8ec;
+  --card-ink: #2a1a3a;
+  --ink: #fff8ec;
+  --muted: #cdbfe0;
+  --gold: #ffcf4a;
+  --gold-d: #e0a800;
+  --red: #b3122e;
+  --red-d: #7a0a1e;
+  --green: #1f8f4e;
+  --green-l: #2fbf71;
+  --blue: #2e6fd8;
+  --wrong: #c2410c;
+  --grey: #8a8198;
+  --radius: 18px;
+  --font: "Comic Sans MS", "Comic Neue", "Chalkboard SE", "Trebuchet MS", sans-serif;
+  --fs: 18px;
+  --header-h: 64px;
+}
+html { font-size: var(--fs); }
+html.groot { --fs: 24px; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); line-height: 1.4;
+  min-height: 100vh; overflow-x: hidden;
+}
+button, input { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+[hidden] { display: none !important; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+/* ---------- Header ---------- */
+header.topbar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .45rem 1rem; min-height: var(--header-h);
+  background: linear-gradient(#3a0714, #22040c);
+  border-bottom: 4px solid var(--gold-d);
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+.logo {
+  background: none; border: 0; color: var(--gold); font-weight: 700;
+  font-size: 1.15rem; display: flex; align-items: center; gap: .4rem; padding: .3rem; min-height: 48px;
+}
+.logo span.klein { color: var(--ink); font-size: .8rem; font-weight: 400; }
+.stats { display: flex; gap: .5rem; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.pill {
+  background: rgba(255,255,255,.1); border-radius: 999px; padding: .2rem .7rem;
+  font-size: .9rem; white-space: nowrap;
+}
+.meter { display: flex; align-items: center; gap: .4rem; }
+.meter .bar {
+  position: relative; width: 130px; height: 16px; border-radius: 999px;
+  background: rgba(255,255,255,.15); overflow: visible;
+}
+.meter .fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold-d), var(--gold)); transition: width .5s;
+}
+.meter .mark { position: absolute; top: -6px; font-size: 14px; transform: translateX(-50%); filter: grayscale(1) opacity(.5); transition: filter .3s; }
+.meter .mark.aan { filter: none; }
+.iconbtn {
+  min-width: 48px; min-height: 48px; border-radius: 50%; border: 2px solid var(--gold-d);
+  background: rgba(255,255,255,.08); color: var(--ink); font-size: 1.3rem;
+}
+.teams { display: flex; gap: .4rem; }
+.team { padding: .2rem .7rem; border-radius: 999px; font-size: .9rem; border: 2px solid transparent; }
+.team.a { background: #7a0a1e; } .team.b { background: #1d3f8a; }
+.team.beurt { border-color: var(--gold); box-shadow: 0 0 10px var(--gold); }
+
+/* ---------- Podium ---------- */
+main#stage {
+  position: relative; min-height: calc(100vh - var(--header-h));
+  padding: 3.2rem 1rem 11rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,207,74,.10), transparent 60%),
+    linear-gradient(var(--stage), var(--stage2) 75%, var(--plank) 75.2%, #3b2210);
+}
+.valance {
+  position: absolute; top: 0; left: 0; right: 0; height: 38px; z-index: 3; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0, var(--red) 70%, transparent 71%) 0 0 / 60px 38px repeat-x;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.5));
+}
+.scherm { max-width: 920px; margin: 0 auto; position: relative; z-index: 2; }
+
+/* Gordijn */
+.gordijn {
+  position: fixed; top: 0; bottom: 0; width: 51%; z-index: 60; pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.28) 0 14px, rgba(255,255,255,.06) 22px, rgba(0,0,0,.28) 44px),
+    linear-gradient(var(--red), var(--red-d));
+  transition: transform 1.3s cubic-bezier(.6,.05,.3,1);
+  box-shadow: 0 0 30px rgba(0,0,0,.6);
+}
+.gordijn.links { left: 0; transform: translateX(-100%); }
+.gordijn.rechts { right: 0; transform: translateX(100%); }
+body.dicht .gordijn { transform: translateX(0); transition: none; }
+
+/* Spotlight overlay */
+#spot {
+  position: fixed; inset: 0; z-index: 30; pointer-events: none;
+  --sx: 50vw; --sy: 40vh; --sr: 2400px;
+  background: radial-gradient(circle var(--sr) at var(--sx) var(--sy),
+     rgba(255,236,170,.16), rgba(255,236,170,.05) 72%, rgba(8,4,16,.52) 100%);
+  transition: --sx .6s ease, --sy .6s ease, --sr .6s ease, opacity .3s;
+}
+#spot.rust { --sr: 2400px; }
+#spot.flikker { animation: flikker .9s steps(1) 1; }
+@keyframes flikker {
+  0% { opacity: 1; } 15% { opacity: .2; } 30% { opacity: 1; } 45% { opacity: .1; }
+  60% { opacity: 1; background: rgba(8,4,16,.55); } 100% { opacity: 1; }
+}
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden; }
+.confetti { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px;
+  animation: val var(--d,2s) linear forwards; }
+@keyframes val { to { transform: translate(var(--dx,0), 105vh) rotate(var(--r,720deg)); } }
+.klap { position: absolute; font-size: 2.4rem; animation: klapOp 1.4s ease-out forwards; }
+@keyframes klapOp { from { transform: translateY(0) scale(.6); opacity: 1; } to { transform: translateY(-160px) scale(1.3); opacity: 0; } }
+.applaus-tekst {
+  position: absolute; left: 50%; top: 32%; transform: translate(-50%,-50%);
+  font-size: 2.6rem; color: var(--gold); font-weight: 700; text-shadow: 0 4px 0 #6b3b00, 0 0 30px #ffcf4a;
+  animation: pop 1.3s ease-out forwards; white-space: nowrap;
+}
+@keyframes pop { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 20% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%,-60%) scale(1); opacity: 0; } }
+
+/* ---------- Kaarten & knoppen ---------- */
+h1.titel {
+  text-align: center; font-size: 2.4rem; margin: .5rem 0 .2rem; color: var(--gold);
+  text-shadow: 0 4px 0 #6b3b00, 0 0 24px rgba(255,207,74,.5);
+}
+.sub { text-align: center; color: var(--muted); margin: 0 0 1.2rem; }
+.kaart {
+  background: var(--card); color: var(--card-ink); border-radius: var(--radius);
+  padding: 1.2rem 1.4rem; box-shadow: 0 10px 30px rgba(0,0,0,.45); margin-bottom: 1rem;
+  border: 4px solid var(--gold);
+}
+.kaart h2 { margin: 0 0 .6rem; font-size: 1.35rem; }
+.btn {
+  min-height: 52px; padding: .55rem 1.2rem; border-radius: 14px; border: 0;
+  font-weight: 700; font-size: 1.05rem; color: #2a1a3a;
+  background: var(--gold); box-shadow: 0 5px 0 var(--gold-d);
+  transition: transform .08s, box-shadow .08s;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--gold-d); }
+.btn.rood { background: #e0435c; color: #fff; box-shadow: 0 5px 0 #8f1a2d; }
+.btn.blauw { background: #4d8cf5; color: #fff; box-shadow: 0 5px 0 #1d4fa8; }
+.btn.groen { background: var(--green-l); color: #0c2b18; box-shadow: 0 5px 0 var(--green); }
+.btn.licht { background: #efe6ff; box-shadow: 0 5px 0 #b9a6de; }
+.btn:disabled { opacity: .45; cursor: default; }
+.rij { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+.rij.midden { justify-content: center; }
+
+.modi { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.modus {
+  text-align: left; border: 4px solid var(--gold); border-radius: var(--radius);
+  background: var(--card); color: var(--card-ink); padding: 1rem; min-height: 150px;
+  box-shadow: 0 8px 0 var(--gold-d); transition: transform .12s;
+}
+.modus:hover { transform: translateY(-3px) rotate(-.5deg); }
+.modus .emo { font-size: 2.2rem; }
+.modus b { display: block; font-size: 1.15rem; margin: .2rem 0; }
+.modus small { color: #5a4a6a; font-size: .85rem; }
+
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  min-height: 48px; padding: .3rem 1rem; border-radius: 999px; border: 3px solid #b9a6de;
+  background: #fff; color: #2a1a3a; font-weight: 700;
+}
+.chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold-d); }
+.chip[aria-pressed="true"]::before { content: "✔ "; }
+
+/* Zin met gat */
+.zin { font-size: 1.5rem; line-height: 1.8; margin: .4rem 0 1rem; }
+.gat {
+  display: inline-block; min-width: 6.5em; border-bottom: 4px dashed #7a5ba8;
+  text-align: center; font-weight: 700; padding: 0 .2em; color: #6d3fb0;
+}
+.gat.gevuld { border-bottom-style: solid; color: var(--green); }
+.inf { color: #7a6a8a; font-size: .9em; }
+.invoer {
+  min-height: 56px; font-size: 1.4rem; padding: .3rem .8rem; border-radius: 12px;
+  border: 3px solid #7a5ba8; min-width: 0; width: 14em; max-width: 100%; color: #2a1a3a;
+}
+.fb { margin-top: 1rem; font-size: 1.1rem; min-height: 1.5em; }
+.fb .goed, .fb .fout, .fb .info {
+  border-radius: 12px; padding: .7rem 1rem; display: block; margin-top: .4rem;
+}
+.fb .goed { background: #dcf7e7; border: 3px solid var(--green-l); }
+.fb .fout { background: #fff0e0; border: 3px dashed var(--wrong); }
+.fb .info { background: #efe6ff; border: 3px solid #b9a6de; }
+.antwoord { color: var(--green); font-size: 1.15em; }
+mark { background: #ffe58a; border-radius: 4px; padding: 0 2px; }
+
+.opties { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin: .6rem 0; }
+.optie { font-size: 1.5rem; min-width: 9em; min-height: 64px; }
+.optie.fout-gekozen { background: #f3d9cc; box-shadow: 0 5px 0 #c9a08c; text-decoration: line-through; }
+.optie.fout-gekozen::after { content: " ✗"; }
+.optie.goed-gekozen { background: var(--green-l); box-shadow: 0 5px 0 var(--green); }
+.optie.goed-gekozen::after { content: " ✔"; }
+
+.timer { height: 12px; border-radius: 999px; background: #e6dcf5; overflow: hidden; margin: .4rem 0 .8rem; }
+.timer .loop { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green-l), var(--gold)); transition: width 1s linear; }
+.voortgang { color: #5a4a6a; font-size: .9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+
+/* Stap voor stap */
+.bedrijven { display: flex; gap: .4rem; margin: .2rem 0 .8rem; flex-wrap: wrap; }
+.bedrijven span {
+  flex: 1; min-width: 50px; text-align: center; font-size: .75rem; padding: .25rem; border-radius: 8px;
+  background: #e6dcf5; color: #5a4a6a;
+}
+.bedrijven span.nu { background: var(--gold); color: #2a1a3a; font-weight: 700; }
+.bedrijven span.klaar { background: var(--green-l); color: #0c2b18; }
+.bedrijven span.klaar::before { content: "✔ "; }
+.tegels { display: flex; flex-wrap: wrap; gap: .35rem; margin: .5rem 0; }
+.tegel {
+  min-width: 48px; min-height: 52px; font-size: 1.5rem; font-weight: 700; border-radius: 10px;
+  border: 3px solid #7a5ba8; background: #fff; color: #2a1a3a;
+}
+.woordtegels { display: flex; gap: .2rem; justify-content: center; margin: .6rem 0; flex-wrap: wrap; }
+.woordtegels span {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 64px;
+  font-size: 2rem; font-weight: 700; border-radius: 10px; background: #efe6ff; padding: 0 .4rem;
+}
+.woordtegels span.laatste { background: var(--gold); box-shadow: 0 0 22px var(--gold); }
+
+/* Kofschip lampjes */
+.lampen { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: center; }
+.lamp {
+  min-width: 44px; height: 48px; padding: 0 .35rem; border-radius: 10px; display: inline-flex;
+  align-items: center; justify-content: center; font-weight: 700; font-size: 1.35rem;
+  font-family: "Courier New", monospace; background: #0e3d22; color: #bff5d4; border: 2px solid #2fbf71;
+  transition: background .3s, box-shadow .3s, transform .3s;
+}
+.lamp.grijs { background: #3a3544; color: #a39cb0; border-color: #6a6378; font-size: 1.1rem; }
+.lamp.aan { background: #fff39a; color: #0c2b18; box-shadow: 0 0 18px #ffe44d, 0 0 40px #ffcf4a; transform: scale(1.15); border-color: #fff; }
+.lamp { position: relative; }
+.lamp.aan::after { content: "💡"; position: absolute; top: -14px; right: -6px; font-size: .8rem; }
+
+/* Spiekstrook */
+footer#spiek {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  background: linear-gradient(#123d27, #0a2819); border-top: 4px solid var(--green-l);
+  color: #eafff1; padding: .35rem .8rem .5rem; box-shadow: 0 -6px 18px rgba(0,0,0,.5);
+}
+#spiek .kop { display: flex; align-items: center; gap: .6rem; }
+#spiek .toggle { flex: none; }
+#spiek .toggle {
+  min-height: 44px; background: rgba(255,255,255,.1); color: #eafff1; border: 2px solid var(--green-l);
+  border-radius: 999px; padding: 0 .9rem;
+}
+#spiek .inhoud { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: center; flex: 1; }
+#spiek .regel { font-size: .9rem; }
+#spiek .regel b { color: #ffd166; }
+#spiek.ingeklapt .inhoud { display: none; }
+.schip { width: 64px; height: 52px; flex: none; }
+.schip .vlag { transform-origin: 32px 8px; animation: wapper 2.4s ease-in-out infinite; }
+@keyframes wapper { 50% { transform: skewY(-6deg) scaleX(.94); } }
+
+/* Uitleg */
+.schema ol { padding-left: 1.3rem; margin: .3rem 0; }
+.schema li { margin: .35rem 0; }
+.voorbeelden { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap: .7rem; }
+.vb { background: #efe6ff; border-radius: 12px; padding: .7rem; }
+.vb b { font-size: 1.25rem; color: #6d3fb0; }
+
+/* Foutenjacht */
+.verhaal { font-size: 1.35rem; line-height: 2.1; }
+.woord {
+  border-radius: 6px; padding: .05em .12em; cursor: pointer; border: 0; background: none; color: inherit;
+  font: inherit; line-height: inherit;
+}
+.woord:hover { background: #efe6ff; }
+.woord.verbeterd { background: #dcf7e7; color: var(--green); font-weight: 700; cursor: default; }
+.woord.verbeterd::after { content: " ✔"; font-size: .8em; }
+.woord.getoond { background: #ffe8cc; color: #8a3a00; font-weight: 700; cursor: default; }
+.woord.getoond::after { content: " ✎"; font-size: .8em; }
+.woord.actief { outline: 3px solid var(--gold); background: #fff3c4; }
+
+/* Einde */
+.sterren { font-size: 3.4rem; text-align: center; letter-spacing: .3rem; }
+.sterren .leeg { filter: grayscale(1) opacity(.35); }
+.rol { text-align: center; font-size: 1.8rem; color: #6d3fb0; font-weight: 700; margin: .3rem 0; }
+
+dialog {
+  border: 4px solid var(--gold); border-radius: var(--radius); background: var(--card); color: var(--card-ink);
+  max-width: min(560px, calc(100vw - 32px)); width: 100%; padding: 1.2rem;
+}
+dialog::backdrop { background: rgba(10,4,20,.7); }
+dialog fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+dialog legend { font-weight: 700; margin-bottom: .4rem; }
+.teamnamen input { min-height: 48px; border-radius: 10px; border: 2px solid #b9a6de; padding: 0 .6rem; width: 10em; max-width: 100%; }
+
+.beurtbanner { text-align: center; font-weight: 700; margin-bottom: .6rem; font-size: 1.1rem; }
+.beurtbanner span { padding: .2rem .8rem; border-radius: 999px; color: #fff; }
+
+@media (max-width: 820px) {
+  #spiek .lamp { min-width: 30px; height: 36px; font-size: 1rem; padding: 0 .2rem; border-radius: 7px; }
+  #spiek .lampen { gap: .2rem; }
+  #spiek .schip { width: 40px; height: 34px; }
+  #spiek .regel { font-size: .75rem; text-align: center; }
+  #spiek .toggle { padding: 0 .6rem; font-size: .85rem; }
+  .meter > span[aria-hidden] { display: none; }
+  .logo span.klein { display: none; }
+  .meter .bar { width: 90px; }
+  header.topbar { gap: .4rem; padding: .35rem .6rem; }
+}
+@media (max-width: 600px) {
+  h1.titel { font-size: 1.8rem; }
+  .zin { font-size: 1.25rem; }
+  .meter .bar { width: 80px; }
+  .logo span.klein { display: none; }
+  main#stage { padding-left: 16px; padding-right: 16px; }
+  .kaart { padding: 1rem; }
+  .optie { min-width: 7em; font-size: 1.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gordijn, #spot { transition: none !important; }
+  .schip .vlag, #spot.flikker { animation: none !important; }
+}
+</style>
+</head>
+<body class="dicht">
+
+<header class="topbar">
+  <button class="logo" id="naarHome" aria-label="Naar het beginscherm">🎭 Spot aan! <span class="klein">op het werkwoord</span></button>
+  <div class="stats" id="stats" hidden>
+    <span class="pill" id="voortgangPill">Woord 1/10</span>
+    <span class="pill" aria-label="Punten">⭐ <b id="punten">0</b></span>
+    <span class="pill" aria-label="Reeks goed op rij">🔥 <b id="reeks">0</b></span>
+    <div class="meter" aria-label="Sterrenmeter">
+      <span aria-hidden="true">Sterrenmeter</span>
+      <div class="bar"><div class="fill" id="meterFill"></div>
+        <span class="mark" style="left:40%">⭐</span><span class="mark" style="left:65%">⭐</span><span class="mark" style="left:88%">⭐</span>
+      </div>
+    </div>
+    <div class="teams" id="teams" hidden></div>
+  </div>
+  <button class="iconbtn" id="openInst" aria-label="Instellingen voor de leerkracht" style="margin-left:auto">⚙️</button>
+</header>
+
+<div class="gordijn links" aria-hidden="true"></div>
+<div class="gordijn rechts" aria-hidden="true"></div>
+<div id="spot" class="rust" aria-hidden="true"></div>
+<div id="fx" aria-hidden="true"></div>
+
+<main id="stage">
+  <div class="valance" aria-hidden="true"></div>
+
+  <!-- HOME -->
+  <section class="scherm" id="home">
+    <h1 class="titel">Spot aan op het werkwoord!</h1>
+    <p class="sub">Jij bent de regisseur van de woorden. Zet de werkwoorden in de verleden tijd in de spotlight!</p>
+
+    <div class="kaart">
+      <h2>🎚️ Kies je niveau</h2>
+      <div class="chips" id="homeNiveau" role="group" aria-label="Niveau"></div>
+      <p id="niveauUitleg" style="margin:.6rem 0 0;color:#5a4a6a"></p>
+    </div>
+
+    <div class="modi" id="modi">
+      <button class="modus" data-mode="stap"><span class="emo">🎬</span><b>Stap voor stap</b><small>Speel het werkwoordschema in 5 bedrijven. Ideaal om te leren!</small></button>
+      <button class="modus" data-mode="snel"><span class="emo">🔦</span><b>Snelle ronde: spot-jacht</b><small>Vul het werkwoord in de zin in. Lukt het op tijd?</small></button>
+      <button class="modus" data-mode="kies"><span class="emo">🎟️</span><b>Kies de juiste spelling</b><small>Welke spelling mag het podium op?</small></button>
+      <button class="modus" data-mode="fouten"><span class="emo">🕵️</span><b>Foutenjacht</b><small>Zoek de spelfouten in het verhaal en verbeter ze.</small></button>
+    </div>
+
+    <div class="rij midden" style="margin-top:1.4rem">
+      <button class="btn licht" id="naarUitleg">📜 Hoe werkt het? (uitleg)</button>
+      <button class="btn rood" id="foutjesBtn">🔁 Oefen mijn foutjes</button>
+    </div>
+  </section>
+
+  <!-- UITLEG -->
+  <section class="scherm" id="uitleg" hidden>
+    <h1 class="titel">Het werkwoordschema</h1>
+    <div class="kaart schema">
+      <h2>🎬 Zo pak je het aan</h2>
+      <ol>
+        <li><b>Is het een persoonsvorm?</b><br>
+          Nee → ik denk aan de regels van de categoriekaart.<br>
+          Ja → ik ga verder met het werkwoordschema en gebruik de werkwoordregel.</li>
+        <li><b>Werkwoordregel:</b> persoonsvorm in de verleden tijd van een zwak werkwoord = <b>ik-vorm + te/de (ten/den)</b>.</li>
+        <li><b>De ik-vorm:</b> ik neem het hele werkwoord en haal er <b>-en</b> af.</li>
+        <li><b>Staat de laatste letter in 't kofschip-x?</b><br>
+          ja → ik schrijf ik-vorm + <b style="color:#c8102e">te(n)</b><br>
+          nee → ik schrijf ik-vorm + <b style="color:#c8102e">de(n)</b></li>
+        <li><b>Eén</b> persoon of ding (ik, jij, hij, zij, het) → <b>-te/-de</b>.<br>
+          <b>Meer</b> personen (wij, jullie, zij) → <b>-ten/-den</b>.</li>
+      </ol>
+      <div class="lampen" id="uitlegLampen" style="margin:.6rem 0"></div>
+      <p style="margin:.2rem 0;color:#5a4a6a;text-align:center">De <b style="color:var(--green)">groene</b> letters tellen: t, k, f, s, ch, p en x. De grijze o, i en - maken er alleen een woord van.</p>
+    </div>
+    <div class="kaart">
+      <h2>⭐ Voorbeelden</h2>
+      <div class="voorbeelden">
+        <div class="vb"><b>ik kletste</b><br>klets + te<br><small>De s zit in 't kofschip.</small></div>
+        <div class="vb"><b>hij groette</b><br>groet + te<br><small>De ik-vorm eindigt al op een t, dus komen er twee t's!</small></div>
+        <div class="vb"><b>wij praatten</b><br>praat + ten<br><small>Meervoud → ten. Ook hier twee t's.</small></div>
+        <div class="vb"><b>jullie fietsten</b><br>fiets + ten<br><small>De s zit in 't kofschip, meervoud → ten.</small></div>
+      </div>
+    </div>
+    <div class="rij midden"><button class="btn" id="uitlegTerug">◀ Terug naar het podium</button></div>
+  </section>
+
+  <!-- SPEL -->
+  <section class="scherm" id="spel" hidden></section>
+
+  <!-- EINDE -->
+  <section class="scherm" id="einde" hidden></section>
+</main>
+
+<footer id="spiek" aria-label="Spiekstrook 't kofschip-x">
+  <div class="kop">
+    <button class="toggle" id="spiekToggle" aria-expanded="true" aria-controls="spiekInhoud">⛵ Spiekstrook ▾</button>
+    <div class="inhoud" id="spiekInhoud">
+      <svg class="schip" viewBox="0 0 64 52" aria-hidden="true">
+        <line x1="32" y1="4" x2="32" y2="36" stroke="#eafff1" stroke-width="3"/>
+        <g class="vlag"><rect x="33" y="6" width="22" height="18" rx="2" fill="#2fbf71"/>
+          <path d="M38 10 L50 20 M50 10 L38 20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
+        <path d="M4 34 H60 L52 46 H12 Z" fill="#2fbf71" stroke="#eafff1" stroke-width="2"/>
+        <path d="M2 49 q6 -4 12 0 t12 0 t12 0 t12 0 t12 0" stroke="#7fdcff" stroke-width="2" fill="none"/>
+      </svg>
+      <div class="lampen" id="spiekLampen"></div>
+      <div class="regel">Laatste letter erin? <b>ja</b> → ik-vorm + <b>te(n)</b> · <b>nee</b> → ik-vorm + <b>de(n)</b></div>
+    </div>
+  </div>
+</footer>
+
+<div class="sr-only" aria-live="assertive" id="melder"></div>
+
+<!-- INSTELLINGEN -->
+<dialog id="instellingen" aria-labelledby="instTitel">
+  <h2 id="instTitel" style="margin-top:0">⚙️ Instellingen (leerkracht)</h2>
+  <fieldset><legend>Niveau</legend><div class="chips" data-set="niveau"></div></fieldset>
+  <fieldset><legend>Woorden per ronde</legend><div class="chips" data-set="aantal"></div></fieldset>
+  <fieldset><legend>Timer (snelle ronde)</legend><div class="chips" data-set="timer"></div></fieldset>
+  <fieldset><legend>Geluid</legend><div class="chips" data-set="geluid"></div></fieldset>
+  <fieldset><legend>Groot lettertype (digibord)</legend><div class="chips" data-set="groot"></div></fieldset>
+  <fieldset><legend>Klassenmodus: 2 teams om de beurt</legend><div class="chips" data-set="klas"></div>
+    <div class="rij teamnamen" style="margin-top:.5rem">
+      <label>Team 1 <input id="teamA" maxlength="16"></label>
+      <label>Team 2 <input id="teamB" maxlength="16"></label>
+    </div>
+  </fieldset>
+  <div class="rij" style="justify-content:space-between">
+    <button class="btn licht" id="wisFoutjes">🧹 Foutjeslijst leegmaken</button>
+    <button class="btn" id="sluitInst">Klaar ✔</button>
+  </div>
+</dialog>
+
+<!-- =============================================================
+     DEEL 1: WOORDENLIJST + KERNLOGICA (geen DOM nodig; testbaar)
+     ============================================================= -->
+<script id="kern">
+/* Alle vormen zijn met de hand uitgeschreven en gecontroleerd.
+   Alleen ZWAKKE werkwoorden. Zie het commentaar bovenaan voor uitleg. */
+const WOORDEN = [
+  /* ---------- NIVEAU 1: alleen te / ten ---------- */
+  { infinitief:"kletsen", ikVorm:"klets", uitgang:"te", verledenTijdEnkelvoud:"kletste", verledenTijdMeervoud:"kletsten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Tijdens de pauze ___ ik met mijn vriendin over het toneelstuk.", mv:false},{zin:"De kinderen ___ achter het gordijn, maar dat mocht niet.", mv:true}] },
+  { infinitief:"groeten", ikVorm:"groet", uitgang:"te", verledenTijdEnkelvoud:"groette", verledenTijdMeervoud:"groetten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"De hoofdrolspeler ___ het publiek met een diepe buiging.", mv:false},{zin:"Wij ___ de schrijver bij de ingang van de bibliotheek.", mv:true}] },
+  { infinitief:"praten", ikVorm:"praat", uitgang:"te", verledenTijdEnkelvoud:"praatte", verledenTijdMeervoud:"praatten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"Wij ___ na afloop nog lang over de voorstelling.", mv:true},{zin:"Mijn opa ___ over zijn lievelingsboek van vroeger.", mv:false}] },
+  { infinitief:"fietsen", ikVorm:"fiets", uitgang:"te", verledenTijdEnkelvoud:"fietste", verledenTijdMeervoud:"fietsten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Gisteren ___ wij samen naar de schouwburg.", mv:true},{zin:"Sanne ___ in haar kostuum naar school.", mv:false}] },
+  { infinitief:"werken", ikVorm:"werk", uitgang:"te", verledenTijdEnkelvoud:"werkte", verledenTijdMeervoud:"werkten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Wij ___ de hele middag aan het decor.", mv:true},{zin:"De lichtman ___ tot laat in het theater.", mv:false}] },
+  { infinitief:"koken", ikVorm:"kook", uitgang:"te", verledenTijdEnkelvoud:"kookte", verledenTijdMeervoud:"kookten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Mijn vader ___ spaghetti voor alle spelers.", mv:false},{zin:"Jullie ___ soep voor het schoolfeest.", mv:true}] },
+  { infinitief:"pakken", ikVorm:"pak", uitgang:"te", verledenTijdEnkelvoud:"pakte", verledenTijdMeervoud:"pakten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ mijn tas in voor het schoolreisje.", mv:false},{zin:"De spelers ___ hun kostuums uit de grote kist.", mv:true}] },
+  { infinitief:"stoppen", ikVorm:"stop", uitgang:"te", verledenTijdEnkelvoud:"stopte", verledenTijdMeervoud:"stopten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De muziek ___ precies op het goede moment.", mv:false},{zin:"Wij ___ de boeken terug in de kast.", mv:true}] },
+  { infinitief:"wachten", ikVorm:"wacht", uitgang:"te", verledenTijdEnkelvoud:"wachtte", verledenTijdMeervoud:"wachtten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"Het publiek ___ vol spanning op het begin.", mv:false},{zin:"Wij ___ achter het gordijn tot de spot aanging.", mv:true}] },
+  { infinitief:"maken", ikVorm:"maak", uitgang:"te", verledenTijdEnkelvoud:"maakte", verledenTijdMeervoud:"maakten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Jij ___ een prachtige poster voor de Kinderboekenweek.", mv:false},{zin:"Wij ___ samen een boekentrailer.", mv:true}] },
+  { infinitief:"lachen", ikVorm:"lach", uitgang:"te", verledenTijdEnkelvoud:"lachte", verledenTijdMeervoud:"lachten", niveau:1, uitleg:"De ik-vorm eindigt op ch, en ch zit in 't kofschip.",
+    zinnen:[{zin:"De hele zaal ___ om de grappige koning.", mv:false},{zin:"Jullie ___ zo hard dat de juf even moest stoppen.", mv:true}] },
+  { infinitief:"bakken", ikVorm:"bak", uitgang:"te", verledenTijdEnkelvoud:"bakte", verledenTijdMeervoud:"bakten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Oma ___ koekjes in de vorm van boeken.", mv:false},{zin:"Wij ___ een taart voor de première.", mv:true}] },
+  { infinitief:"hopen", ikVorm:"hoop", uitgang:"te", verledenTijdEnkelvoud:"hoopte", verledenTijdMeervoud:"hoopten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ dat ik de hoofdrol zou krijgen.", mv:false},{zin:"De spelers ___ op een groot applaus.", mv:true}] },
+  { infinitief:"dansen", ikVorm:"dans", uitgang:"te", verledenTijdEnkelvoud:"danste", verledenTijdMeervoud:"dansten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De prinses ___ over het podium.", mv:false},{zin:"Wij ___ in de spotlight tot de muziek stopte.", mv:true}] },
+  { infinitief:"knippen", ikVorm:"knip", uitgang:"te", verledenTijdEnkelvoud:"knipte", verledenTijdMeervoud:"knipten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Jij ___ sterren uit goudpapier.", mv:false},{zin:"Wij ___ de kaartjes voor de voorstelling uit.", mv:true}] },
+  { infinitief:"plakken", ikVorm:"plak", uitgang:"te", verledenTijdEnkelvoud:"plakte", verledenTijdMeervoud:"plakten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ een foto van de schrijver in mijn schrift.", mv:false},{zin:"Jullie ___ de posters op de deur van de aula.", mv:true}] },
+  { infinitief:"poetsen", ikVorm:"poets", uitgang:"te", verledenTijdEnkelvoud:"poetste", verledenTijdMeervoud:"poetsten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De conciërge ___ de spots tot ze glommen.", mv:false},{zin:"Wij ___ de laarzen van de piraat.", mv:true}] },
+  { infinitief:"zetten", ikVorm:"zet", uitgang:"te", verledenTijdEnkelvoud:"zette", verledenTijdMeervoud:"zetten", niveau:1, uitleg:"De ik-vorm eindigt al op een t: zet + te = zette, zet + ten = zetten.",
+    zinnen:[{zin:"De regisseur ___ de stoelen in een lange rij.", mv:false},{zin:"Wij ___ de lamp op de piratenkist.", mv:true}] },
+  { infinitief:"rusten", ikVorm:"rust", uitgang:"te", verledenTijdEnkelvoud:"rustte", verledenTijdMeervoud:"rustten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"Na de repetitie ___ ik even uit op de bank.", mv:false},{zin:"De spelers ___ in de pauze achter het toneel.", mv:true}] },
+  { infinitief:"juichen", ikVorm:"juich", uitgang:"te", verledenTijdEnkelvoud:"juichte", verledenTijdMeervoud:"juichten", niveau:1, uitleg:"De ik-vorm eindigt op ch, en ch zit in 't kofschip.",
+    zinnen:[{zin:"Het publiek ___ toen het doek viel.", mv:false},{zin:"Wij ___ voor onze klasgenoten.", mv:true}] },
+  { infinitief:"missen", ikVorm:"mis", uitgang:"te", verledenTijdEnkelvoud:"miste", verledenTijdMeervoud:"misten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ bijna mijn opkomst!", mv:false},{zin:"Jullie ___ het begin van het toneelstuk.", mv:true}] },
+  { infinitief:"schaatsen", ikVorm:"schaats", uitgang:"te", verledenTijdEnkelvoud:"schaatste", verledenTijdMeervoud:"schaatsten", niveau:1, uitleg:"",
+    zinnen:[{zin:"In het verhaal ___ de held over het bevroren meer.", mv:false},{zin:"Wij ___ in de winter op de ijsbaan.", mv:true}] },
+  { infinitief:"wensen", ikVorm:"wens", uitgang:"te", verledenTijdEnkelvoud:"wenste", verledenTijdMeervoud:"wensten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De juf ___ ons veel succes.", mv:false},{zin:"Wij ___ elkaar toi toi toi voor de voorstelling.", mv:true}] },
+  { infinitief:"tikken", ikVorm:"tik", uitgang:"te", verledenTijdEnkelvoud:"tikte", verledenTijdMeervoud:"tikten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ zachtjes op het gordijn.", mv:false},{zin:"De dansers ___ met hun schoenen op de vloer.", mv:true}] },
+  { infinitief:"blaffen", ikVorm:"blaf", uitgang:"te", verledenTijdEnkelvoud:"blafte", verledenTijdMeervoud:"blaften", niveau:1, uitleg:"",
+    zinnen:[{zin:"De hond in het toneelstuk ___ heel echt.", mv:false},{zin:"De honden van de buren ___ tijdens de voorstelling.", mv:true}] },
+  { infinitief:"klappen", ikVorm:"klap", uitgang:"te", verledenTijdEnkelvoud:"klapte", verledenTijdMeervoud:"klapten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Mijn moeder ___ het hardst van iedereen.", mv:false},{zin:"Wij ___ voor alle spelers.", mv:true}] },
+  { infinitief:"stappen", ikVorm:"stap", uitgang:"te", verledenTijdEnkelvoud:"stapte", verledenTijdMeervoud:"stapten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De tovenaar ___ in de lichtcirkel van de spot.", mv:false},{zin:"Jullie ___ precies op tijd het podium op.", mv:true}] },
+  { infinitief:"schminken", ikVorm:"schmink", uitgang:"te", verledenTijdEnkelvoud:"schminkte", verledenTijdMeervoud:"schminkten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De juf ___ mijn gezicht als een tijger.", mv:false},{zin:"Wij ___ elkaar voor het verkleedfeest.", mv:true}] },
+  { infinitief:"flitsen", ikVorm:"flits", uitgang:"te", verledenTijdEnkelvoud:"flitste", verledenTijdMeervoud:"flitsten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De camera van de fotograaf ___ tijdens de buiging.", mv:false},{zin:"De lampen ___ aan en uit.", mv:true}] },
+  { infinitief:"passen", ikVorm:"pas", uitgang:"te", verledenTijdEnkelvoud:"paste", verledenTijdMeervoud:"pasten", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ het kostuum van de reus.", mv:false},{zin:"Wij ___ de hoeden uit de verkleedkist.", mv:true}] },
+  { infinitief:"zuchten", ikVorm:"zucht", uitgang:"te", verledenTijdEnkelvoud:"zuchtte", verledenTijdMeervoud:"zuchtten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"De prinses ___ diep en keek uit het raam.", mv:false},{zin:"Wij ___ toen de voorstelling voorbij was.", mv:true}] },
+  { infinitief:"haasten", ikVorm:"haast", uitgang:"te", verledenTijdEnkelvoud:"haastte", verledenTijdMeervoud:"haastten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"De verteller ___ zich naar het podium.", mv:false},{zin:"Wij ___ ons naar de bus van het schoolreisje.", mv:true}] },
+  { infinitief:"kloppen", ikVorm:"klop", uitgang:"te", verledenTijdEnkelvoud:"klopte", verledenTijdMeervoud:"klopten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De heks ___ drie keer op de deur.", mv:false},{zin:"Onze harten ___ in onze keel.", mv:true}] },
+  { infinitief:"knikken", ikVorm:"knik", uitgang:"te", verledenTijdEnkelvoud:"knikte", verledenTijdMeervoud:"knikten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De regisseur ___ tevreden.", mv:false},{zin:"De spelers ___ naar elkaar voor het begin.", mv:true}] },
+  { infinitief:"straffen", ikVorm:"straf", uitgang:"te", verledenTijdEnkelvoud:"strafte", verledenTijdMeervoud:"straften", niveau:1, uitleg:"",
+    zinnen:[{zin:"In het boek ___ de koning de boze ridder.", mv:false}] },
+  { infinitief:"verlichten", ikVorm:"verlicht", uitgang:"te", verledenTijdEnkelvoud:"verlichtte", verledenTijdMeervoud:"verlichtten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"De grote spot ___ het hele podium.", mv:false},{zin:"Twee lampen ___ het decor.", mv:true}] },
+  { infinitief:"ploffen", ikVorm:"plof", uitgang:"te", verledenTijdEnkelvoud:"plofte", verledenTijdMeervoud:"ploften", niveau:1, uitleg:"",
+    zinnen:[{zin:"Ik ___ na de voorstelling op de bank.", mv:false}] },
+  { infinitief:"hoesten", ikVorm:"hoest", uitgang:"te", verledenTijdEnkelvoud:"hoestte", verledenTijdMeervoud:"hoestten", niveau:1, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"Iemand in de zaal ___ heel hard.", mv:false},{zin:"De toeschouwers ___ tijdens de stille scène.", mv:true}] },
+  { infinitief:"kussen", ikVorm:"kus", uitgang:"te", verledenTijdEnkelvoud:"kuste", verledenTijdMeervoud:"kusten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De kikker ___ de prinses op haar hand.", mv:false}] },
+  { infinitief:"prikken", ikVorm:"prik", uitgang:"te", verledenTijdEnkelvoud:"prikte", verledenTijdMeervoud:"prikten", niveau:1, uitleg:"",
+    zinnen:[{zin:"De naald ___ in mijn vinger toen ik het kostuum naaide.", mv:false},{zin:"Wij ___ gouden sterren op het doek.", mv:true}] },
+
+  /* ---------- NIVEAU 2: ook de / den ---------- */
+  { infinitief:"wonen", ikVorm:"woon", uitgang:"de", verledenTijdEnkelvoud:"woonde", verledenTijdMeervoud:"woonden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De schrijver ___ in een klein huisje aan zee.", mv:false},{zin:"Wij ___ vroeger naast de bibliotheek.", mv:true}] },
+  { infinitief:"leren", ikVorm:"leer", uitgang:"de", verledenTijdEnkelvoud:"leerde", verledenTijdMeervoud:"leerden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ mijn tekst uit mijn hoofd.", mv:false},{zin:"Wij ___ een lied voor de musical.", mv:true}] },
+  { infinitief:"horen", ikVorm:"hoor", uitgang:"de", verledenTijdEnkelvoud:"hoorde", verledenTijdMeervoud:"hoorden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Plotseling ___ ik een geluid achter het gordijn.", mv:false},{zin:"Jullie ___ het applaus tot buiten.", mv:true}] },
+  { infinitief:"bellen", ikVorm:"bel", uitgang:"de", verledenTijdEnkelvoud:"belde", verledenTijdMeervoud:"belden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Mijn vriend ___ me op om over het boek te praten.", mv:false},{zin:"Wij ___ aan bij het huis van de schrijver.", mv:true}] },
+  { infinitief:"spelen", ikVorm:"speel", uitgang:"de", verledenTijdEnkelvoud:"speelde", verledenTijdMeervoud:"speelden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Lisa ___ de rol van de koningin.", mv:false},{zin:"Wij ___ het toneelstuk voor alle ouders.", mv:true}] },
+  { infinitief:"bouwen", ikVorm:"bouw", uitgang:"de", verledenTijdEnkelvoud:"bouwde", verledenTijdMeervoud:"bouwden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Mijn opa ___ een kasteel van karton.", mv:false},{zin:"Wij ___ samen het decor.", mv:true}] },
+  { infinitief:"kleuren", ikVorm:"kleur", uitgang:"de", verledenTijdEnkelvoud:"kleurde", verledenTijdMeervoud:"kleurden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ de boekenlegger met stiften.", mv:false},{zin:"Jullie ___ de kaartjes in de mooiste kleuren.", mv:true}] },
+  { infinitief:"ruimen", ikVorm:"ruim", uitgang:"de", verledenTijdEnkelvoud:"ruimde", verledenTijdMeervoud:"ruimden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Na afloop ___ ik het podium op.", mv:false},{zin:"Wij ___ de verkleedkist op.", mv:true}] },
+  { infinitief:"noemen", ikVorm:"noem", uitgang:"de", verledenTijdEnkelvoud:"noemde", verledenTijdMeervoud:"noemden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De schrijver ___ haar boek 'Spot aan'.", mv:false},{zin:"Wij ___ onze toneelgroep De Sterren.", mv:true}] },
+  { infinitief:"oefenen", ikVorm:"oefen", uitgang:"de", verledenTijdEnkelvoud:"oefende", verledenTijdMeervoud:"oefenden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ elke avond mijn tekst.", mv:false},{zin:"Wij ___ de dans in de gymzaal.", mv:true}] },
+  { infinitief:"luisteren", ikVorm:"luister", uitgang:"de", verledenTijdEnkelvoud:"luisterde", verledenTijdMeervoud:"luisterden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De hele klas ___ naar het voorleesverhaal.", mv:false},{zin:"Wij ___ muisstil naar de verteller.", mv:true}] },
+  { infinitief:"tekenen", ikVorm:"teken", uitgang:"de", verledenTijdEnkelvoud:"tekende", verledenTijdMeervoud:"tekenden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Jij ___ een draak voor op de poster.", mv:false},{zin:"Wij ___ strips over ons lievelingsboek.", mv:true}] },
+  { infinitief:"duren", ikVorm:"duur", uitgang:"de", verledenTijdEnkelvoud:"duurde", verledenTijdMeervoud:"duurden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De voorstelling ___ twee uur.", mv:false},{zin:"De repetities ___ elke week langer.", mv:true}] },
+  { infinitief:"huilen", ikVorm:"huil", uitgang:"de", verledenTijdEnkelvoud:"huilde", verledenTijdMeervoud:"huilden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De prinses ___ neptranen in de laatste scène.", mv:false},{zin:"Wij ___ bijna bij het verdrietige einde.", mv:true}] },
+  { infinitief:"gooien", ikVorm:"gooi", uitgang:"de", verledenTijdEnkelvoud:"gooide", verledenTijdMeervoud:"gooiden", niveau:2, uitleg:"De i is een grijze letter in 't kofschip: die telt niet mee.",
+    zinnen:[{zin:"De clown ___ confetti over het publiek.", mv:false},{zin:"Wij ___ bloemen op het podium.", mv:true}] },
+  { infinitief:"draaien", ikVorm:"draai", uitgang:"de", verledenTijdEnkelvoud:"draaide", verledenTijdMeervoud:"draaiden", niveau:2, uitleg:"De i is een grijze letter in 't kofschip: die telt niet mee.",
+    zinnen:[{zin:"De danseres ___ rondjes in de spotlight.", mv:false},{zin:"De spots ___ naar het midden van het podium.", mv:true}] },
+  { infinitief:"zwaaien", ikVorm:"zwaai", uitgang:"de", verledenTijdEnkelvoud:"zwaaide", verledenTijdMeervoud:"zwaaiden", niveau:2, uitleg:"De i is een grijze letter in 't kofschip: die telt niet mee.",
+    zinnen:[{zin:"Ik ___ naar mijn ouders in de zaal.", mv:false},{zin:"Wij ___ naar het publiek bij de buiging.", mv:true}] },
+  { infinitief:"rollen", ikVorm:"rol", uitgang:"de", verledenTijdEnkelvoud:"rolde", verledenTijdMeervoud:"rolden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De bal ___ zo het podium af.", mv:false},{zin:"Wij ___ de rode loper uit.", mv:true}] },
+  { infinitief:"schilderen", ikVorm:"schilder", uitgang:"de", verledenTijdEnkelvoud:"schilderde", verledenTijdMeervoud:"schilderden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Mijn broer ___ de achtergrond van het decor.", mv:false},{zin:"Jullie ___ een bos op een groot doek.", mv:true}] },
+  { infinitief:"brullen", ikVorm:"brul", uitgang:"de", verledenTijdEnkelvoud:"brulde", verledenTijdMeervoud:"brulden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De leeuw ___ zo hard dat iedereen schrok.", mv:false},{zin:"De monsters ___ achter het gordijn.", mv:true}] },
+  { infinitief:"vullen", ikVorm:"vul", uitgang:"de", verledenTijdEnkelvoud:"vulde", verledenTijdMeervoud:"vulden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ de schatkist met gouden munten.", mv:false},{zin:"De kinderen ___ de zaal tot de laatste stoel.", mv:true}] },
+  { infinitief:"leggen", ikVorm:"leg", uitgang:"de", verledenTijdEnkelvoud:"legde", verledenTijdMeervoud:"legden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De juf ___ de nieuwe boeken op tafel.", mv:false},{zin:"Wij ___ de kostuums klaar voor morgen.", mv:true}] },
+  { infinitief:"dromen", ikVorm:"droom", uitgang:"de", verledenTijdEnkelvoud:"droomde", verledenTijdMeervoud:"droomden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ dat ik in een boek woonde.", mv:false},{zin:"Wij ___ van een grote rol.", mv:true}] },
+  { infinitief:"knuffelen", ikVorm:"knuffel", uitgang:"de", verledenTijdEnkelvoud:"knuffelde", verledenTijdMeervoud:"knuffelden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Het meisje ___ haar beer tijdens het verhaal.", mv:false},{zin:"Wij ___ elkaar na de voorstelling.", mv:true}] },
+  { infinitief:"repeteren", ikVorm:"repeteer", uitgang:"de", verledenTijdEnkelvoud:"repeteerde", verledenTijdMeervoud:"repeteerden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Onze klas ___ elke vrijdag.", mv:false},{zin:"Wij ___ de laatste scène nog één keer.", mv:true}] },
+  { infinitief:"applaudisseren", ikVorm:"applaudisseer", uitgang:"de", verledenTijdEnkelvoud:"applaudisseerde", verledenTijdMeervoud:"applaudisseerden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Het publiek ___ minutenlang.", mv:false},{zin:"Wij ___ voor de schrijver.", mv:true}] },
+  { infinitief:"gillen", ikVorm:"gil", uitgang:"de", verledenTijdEnkelvoud:"gilde", verledenTijdMeervoud:"gilden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De heks ___ en verdween in een wolk rook.", mv:false},{zin:"Wij ___ bij het enge stuk.", mv:true}] },
+  { infinitief:"lenen", ikVorm:"leen", uitgang:"de", verledenTijdEnkelvoud:"leende", verledenTijdMeervoud:"leenden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ drie boeken bij de bibliotheek.", mv:false},{zin:"Wij ___ een kostuum van de buren.", mv:true}] },
+  { infinitief:"sjouwen", ikVorm:"sjouw", uitgang:"de", verledenTijdEnkelvoud:"sjouwde", verledenTijdMeervoud:"sjouwden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Meester Tim ___ de zware kist naar het podium.", mv:false},{zin:"Wij ___ de stoelen naar de aula.", mv:true}] },
+  { infinitief:"regisseren", ikVorm:"regisseer", uitgang:"de", verledenTijdEnkelvoud:"regisseerde", verledenTijdMeervoud:"regisseerden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Juf Amira ___ het toneelstuk van groep 8.", mv:false}] },
+  { infinitief:"vertellen", ikVorm:"vertel", uitgang:"de", verledenTijdEnkelvoud:"vertelde", verledenTijdMeervoud:"vertelden", niveau:2, uitleg:"",
+    zinnen:[{zin:"De verteller ___ een spannend verhaal.", mv:false},{zin:"Wij ___ over ons lievelingsboek.", mv:true}] },
+  { infinitief:"betalen", ikVorm:"betaal", uitgang:"de", verledenTijdEnkelvoud:"betaalde", verledenTijdMeervoud:"betaalden", niveau:2, uitleg:"",
+    zinnen:[{zin:"Ik ___ met mijn zakgeld voor een nieuw boek.", mv:false},{zin:"Wij ___ een euro voor een kaartje.", mv:true}] },
+
+  /* ---------- NIVEAU 3: expert ---------- */
+  /* v/z-woorden: de ik-vorm eindigt op f/s, maar in het hele werkwoord staat v/z.
+     't kofschip kijkt dan naar de v of z → de(n). Daarom staat er letter:"v"/"z". */
+  { infinitief:"reizen", ikVorm:"reis", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"reisde", verledenTijdMeervoud:"reisden", niveau:3, uitleg:"Je hoort een z in reizen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"De held uit het boek ___ de hele wereld rond.", mv:false},{zin:"Wij ___ met de bus naar het theater.", mv:true}] },
+  { infinitief:"geloven", ikVorm:"geloof", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"geloofde", verledenTijdMeervoud:"geloofden", niveau:3, uitleg:"Je hoort een v in geloven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"Ik ___ bijna dat de draak echt was.", mv:false},{zin:"De kinderen ___ het verhaal van de tovenaar.", mv:true}] },
+  { infinitief:"verhuizen", ikVorm:"verhuis", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"verhuisde", verledenTijdMeervoud:"verhuisden", niveau:3, uitleg:"Je hoort een z in verhuizen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"De schrijver ___ naar een huis vol boeken.", mv:false},{zin:"Wij ___ vorig jaar naar een nieuwe stad.", mv:true}] },
+  { infinitief:"leven", ikVorm:"leef", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"leefde", verledenTijdMeervoud:"leefden", niveau:3, uitleg:"Je hoort een v in leven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"De ridder ___ nog lang en gelukkig.", mv:false},{zin:"De dieren in het verhaal ___ in een groot bos.", mv:true}] },
+  { infinitief:"beloven", ikVorm:"beloof", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"beloofde", verledenTijdMeervoud:"beloofden", niveau:3, uitleg:"Je hoort een v in beloven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"Ik ___ mijn tekst goed te leren.", mv:false},{zin:"Wij ___ de juf dat we stil zouden zijn.", mv:true}] },
+  { infinitief:"durven", ikVorm:"durf", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"durfde", verledenTijdMeervoud:"durfden", niveau:3, uitleg:"Je hoort een v in durven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"Jij ___ als eerste het podium op te gaan.", mv:false},{zin:"Wij ___ niet te kijken bij het enge stuk.", mv:true}] },
+  { infinitief:"verven", ikVorm:"verf", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"verfde", verledenTijdMeervoud:"verfden", niveau:3, uitleg:"Je hoort een v in verven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"Mijn zus ___ het kasteel grijs.", mv:false},{zin:"Wij ___ de muren van het decor blauw.", mv:true}] },
+  { infinitief:"zweven", ikVorm:"zweef", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"zweefde", verledenTijdMeervoud:"zweefden", niveau:3, uitleg:"Je hoort een v in zweven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"De fee ___ boven het podium.", mv:false},{zin:"De ballonnen ___ door de zaal.", mv:true}] },
+  { infinitief:"vrezen", ikVorm:"vrees", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"vreesde", verledenTijdMeervoud:"vreesden", niveau:3, uitleg:"Je hoort een z in vrezen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"De koning ___ de draak.", mv:false},{zin:"Wij ___ dat het gordijn niet open zou gaan.", mv:true}] },
+  { infinitief:"blozen", ikVorm:"bloos", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"bloosde", verledenTijdMeervoud:"bloosden", niveau:3, uitleg:"Je hoort een z in blozen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"Ik ___ toen iedereen voor mij klapte.", mv:false},{zin:"De spelers ___ van trots.", mv:true}] },
+  { infinitief:"niezen", ikVorm:"nies", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"niesde", verledenTijdMeervoud:"niesden", niveau:3, uitleg:"Je hoort een z in niezen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"De reus ___ zo hard dat het decor omviel.", mv:false},{zin:"Wij ___ door het stof in de verkleedkist.", mv:true}] },
+  { infinitief:"verbazen", ikVorm:"verbaas", letter:"z", uitgang:"de", verledenTijdEnkelvoud:"verbaasde", verledenTijdMeervoud:"verbaasden", niveau:3, uitleg:"Je hoort een z in verbazen. De z zit niet in 't kofschip.",
+    zinnen:[{zin:"De goochelaar ___ het hele publiek.", mv:false},{zin:"De spelers ___ ons met een geweldige dans.", mv:true}] },
+  { infinitief:"beven", ikVorm:"beef", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"beefde", verledenTijdMeervoud:"beefden", niveau:3, uitleg:"Je hoort een v in beven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"Het kleine konijn ___ van angst.", mv:false},{zin:"Mijn knieën ___ vlak voor de voorstelling.", mv:true}] },
+  { infinitief:"wuiven", ikVorm:"wuif", letter:"v", uitgang:"de", verledenTijdEnkelvoud:"wuifde", verledenTijdMeervoud:"wuifden", niveau:3, uitleg:"Je hoort een v in wuiven. De v zit niet in 't kofschip.",
+    zinnen:[{zin:"De koningin ___ vanuit haar koets.", mv:false},{zin:"Wij ___ naar de bus van de toneelgroep.", mv:true}] },
+  /* ik-vorm eindigt op d → twee d's */
+  { infinitief:"antwoorden", ikVorm:"antwoord", uitgang:"de", verledenTijdEnkelvoud:"antwoordde", verledenTijdMeervoud:"antwoordden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"De prins ___ met een lied.", mv:false},{zin:"Wij ___ in koor op de vraag van de verteller.", mv:true}] },
+  { infinitief:"landen", ikVorm:"land", uitgang:"de", verledenTijdEnkelvoud:"landde", verledenTijdMeervoud:"landden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"Het vliegtuig van de schrijver ___ op tijd.", mv:false},{zin:"De vogels ___ op het dak van het theater.", mv:true}] },
+  { infinitief:"branden", ikVorm:"brand", uitgang:"de", verledenTijdEnkelvoud:"brandde", verledenTijdMeervoud:"brandden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"Er ___ één kaars op het donkere podium.", mv:false},{zin:"De kaarsen ___ tot het einde van de voorstelling.", mv:true}] },
+  { infinitief:"verkleden", ikVorm:"verkleed", uitgang:"de", verledenTijdEnkelvoud:"verkleedde", verledenTijdMeervoud:"verkleedden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"Ik ___ me als piraat.", mv:false},{zin:"Wij ___ ons als personages uit ons lievelingsboek.", mv:true}] },
+  { infinitief:"bloeden", ikVorm:"bloed", uitgang:"de", verledenTijdEnkelvoud:"bloedde", verledenTijdMeervoud:"bloedden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"De ridder ___ uit een nepwond van ketchup.", mv:false}] },
+  { infinitief:"redden", ikVorm:"red", uitgang:"de", verledenTijdEnkelvoud:"redde", verledenTijdMeervoud:"redden", niveau:3, uitleg:"De ik-vorm eindigt al op een d: red + de = redde, red + den = redden.",
+    zinnen:[{zin:"De heldin ___ de draak uit de toren.", mv:false},{zin:"Wij ___ het toneelstuk met een snelle grap.", mv:true}] },
+  { infinitief:"melden", ikVorm:"meld", uitgang:"de", verledenTijdEnkelvoud:"meldde", verledenTijdMeervoud:"meldden", niveau:3, uitleg:"De ik-vorm eindigt al op een d, dus komen er twee d's.",
+    zinnen:[{zin:"Ik ___ me aan voor de toneelclub.", mv:false},{zin:"Wij ___ ons bij de ingang van het theater.", mv:true}] },
+  /* langere woorden met be-/ver-/her-/ont- en Engelse x-woorden */
+  { infinitief:"ontdekken", ikVorm:"ontdek", uitgang:"te", verledenTijdEnkelvoud:"ontdekte", verledenTijdMeervoud:"ontdekten", niveau:3, uitleg:"",
+    zinnen:[{zin:"Ik ___ een geheime deur achter het decor.", mv:false},{zin:"Wij ___ een schat in de oude kast.", mv:true}] },
+  { infinitief:"verrassen", ikVorm:"verras", uitgang:"te", verledenTijdEnkelvoud:"verraste", verledenTijdMeervoud:"verrasten", niveau:3, uitleg:"",
+    zinnen:[{zin:"De schrijver ___ ons met een bezoek aan de klas.", mv:false},{zin:"Wij ___ de juf met een zelfgemaakt boek.", mv:true}] },
+  { infinitief:"barsten", ikVorm:"barst", uitgang:"te", verledenTijdEnkelvoud:"barstte", verledenTijdMeervoud:"barstten", niveau:3, uitleg:"De ik-vorm eindigt al op een t, dus komen er twee t's.",
+    zinnen:[{zin:"De ballon ___ midden in de stille scène.", mv:false},{zin:"Wij ___ in lachen uit.", mv:true}] },
+  { infinitief:"herhalen", ikVorm:"herhaal", uitgang:"de", verledenTijdEnkelvoud:"herhaalde", verledenTijdMeervoud:"herhaalden", niveau:3, uitleg:"",
+    zinnen:[{zin:"De juf ___ de moeilijke zin nog een keer.", mv:false},{zin:"Wij ___ het lied tot we het kenden.", mv:true}] },
+  { infinitief:"herkennen", ikVorm:"herken", uitgang:"de", verledenTijdEnkelvoud:"herkende", verledenTijdMeervoud:"herkenden", niveau:3, uitleg:"",
+    zinnen:[{zin:"Ik ___ mijn vader niet in zijn kostuum.", mv:false},{zin:"Jullie ___ de schrijver van de foto.", mv:true}] },
+  { infinitief:"fixen", ikVorm:"fix", uitgang:"te", verledenTijdEnkelvoud:"fixte", verledenTijdMeervoud:"fixten", niveau:3, uitleg:"De x staat achteraan in 't kofschip-x.",
+    zinnen:[{zin:"De technicus ___ de kapotte spot.", mv:false}] },
+  { infinitief:"mixen", ikVorm:"mix", uitgang:"te", verledenTijdEnkelvoud:"mixte", verledenTijdMeervoud:"mixten", niveau:3, uitleg:"De x staat achteraan in 't kofschip-x.",
+    zinnen:[{zin:"De dj ___ de muziek voor het eindfeest.", mv:false},{zin:"Wij ___ geluiden voor het hoorspel.", mv:true}] },
+  { infinitief:"relaxen", ikVorm:"relax", uitgang:"te", verledenTijdEnkelvoud:"relaxte", verledenTijdMeervoud:"relaxten", niveau:3, uitleg:"De x staat achteraan in 't kofschip-x.",
+    zinnen:[{zin:"Na de première ___ ik op de bank.", mv:false},{zin:"De spelers ___ in de kleedkamer.", mv:true}] },
+];
+
+/* Foutenjacht-verhalen. {werkwoord|ev} = enkelvoud, {werkwoord|mv} = meervoud. */
+const VERHALEN = [
+  { niveau:1, tekst:"Vrijdag was de grote dag. Wij {wachten|mv} achter het rode gordijn. Sanne {kletsen|ev} zenuwachtig met Daan. Toen {flitsen|mv} de spots aan. De hele zaal {juichen|ev} en wij {dansen|mv} het podium op." },
+  { niveau:1, tekst:"Op het schoolreisje {fietsen|mv} wij naar het theater. Daar {praten|ev} de regisseur over het toneelstuk. Ik {passen|ev} een piratenpak. Juf Mila {schminken|ev} mijn gezicht. Wij {lachen|mv} om elkaar." },
+  { niveau:1, tekst:"De verteller {groeten|ev} het publiek. Hij {pakken|ev} een dik boek uit zijn tas. Wij {hopen|mv} op een spannend verhaal. De spot {verlichten|ev} zijn gezicht. Aan het eind {klappen|mv} wij heel hard." },
+  { niveau:1, tekst:"Oma {bakken|ev} koekjes voor de première. Wij {maken|mv} een grote poster. Mijn broertje {plakken|ev} er sterren op. Daarna {rusten|mv} wij even uit. De juf {wensen|ev} iedereen veel succes." },
+  { niveau:2, tekst:"In de Kinderboekenweek {repeteren|mv} wij elke dag. Ik {leren|ev} mijn tekst uit mijn hoofd. Mees {bouwen|ev} een kasteel van karton. Wij {schilderen|mv} de achtergrond. Het publiek {applaudisseren|ev} na afloop." },
+  { niveau:2, tekst:"De schrijver {wonen|ev} in een huisje vol boeken. Zij {vertellen|ev} ons over haar nieuwste verhaal. Wij {luisteren|mv} muisstil. Daarna {tekenen|mv} wij de hoofdpersoon. Ik {kleuren|ev} de draak groen." },
+  { niveau:2, tekst:"De spots {draaien|mv} naar het midden. De clown {gooien|ev} confetti in de zaal. De kinderen {gillen|mv} van plezier. Ik {zwaaien|ev} naar mijn ouders. Daarna {werken|mv} wij samen om alles op te ruimen." },
+  { niveau:3, tekst:"Voor het boekenfeest {verkleden|mv} wij ons als personages. Ik {durven|ev} eerst niet het podium op. Toen {antwoorden|ev} ik op de vraag van de verteller. Iedereen {verbazen|ev} zich over mijn kostuum. Wij {beloven|mv} om volgend jaar weer mee te doen." },
+  { niveau:3, tekst:"De held uit het boek {reizen|ev} naar een ver land. Daar {leven|ev} een boze draak. De draak {vrezen|ev} niemand. Maar de held {redden|ev} de prinses. De mensen {geloven|mv} hun ogen niet." },
+  { niveau:3, tekst:"Na de voorstelling {relaxen|mv} wij in de kleedkamer. Ik {herkennen|ev} mijn vader eerst niet. Hij {verrassen|ev} mij met bloemen. Ik {blozen|ev} van trots. De kaarsen op het podium {branden|mv} nog lang." },
+];
+
+/* ---------- Kernlogica ---------- */
+// Letters van 't kofschip-x die meetellen (groen op de kaart). o, i en - zijn "sierletters".
+const KOF_ACTIEF = ["t","k","f","s","ch","p","x"];
+const KOF_STRIP = [["'t","t",true],["k","k",true],["o","o",false],["f","f",true],["s","s",true],
+                   ["ch","ch",true],["i","i",false],["p","p",true],["-","-",false],["x","x",true]];
+
+const WOORDBOEK = Object.fromEntries(WOORDEN.map(w => [w.infinitief, w]));
+
+function laatsteLetter(w) { return w.ikVorm.endsWith("ch") ? "ch" : w.ikVorm.slice(-1); }
+function kofLetter(w) { return w.letter || laatsteLetter(w); }       // de letter waar 't kofschip naar kijkt
+function inKofschip(letter) { return KOF_ACTIEF.includes(letter); }
+function vorm(w, mv) { return mv ? w.verledenTijdMeervoud : w.verledenTijdEnkelvoud; }
+function uitgangVol(w, mv) { return w.uitgang + (mv ? "n" : ""); }
+function norm(s) { return String(s == null ? "" : s).toLowerCase().replace(/[\s.,!?;:'"]/g, ""); }
+function isGoed(invoer, w, mv) { const n = norm(invoer); return n !== "" && n === norm(vorm(w, mv)); }
+
+function woordenVoorNiveau(niv) {
+  if (niv === "1") return WOORDEN.filter(w => w.niveau === 1);
+  if (niv === "2") return WOORDEN.filter(w => w.niveau <= 2);
+  if (niv === "3") return WOORDEN.filter(w => w.niveau === 3);
+  return WOORDEN.slice();
+}
+function verhalenVoorNiveau(niv) {
+  if (niv === "1") return VERHALEN.filter(v => v.niveau === 1);
+  if (niv === "2") return VERHALEN.filter(v => v.niveau <= 2);
+  if (niv === "3") return VERHALEN.filter(v => v.niveau === 3);
+  return VERHALEN.slice();
+}
+
+function markeerLetter(inf, letter) {
+  const stam = inf.slice(0, -2);
+  const i = stam.lastIndexOf(letter);
+  return stam.slice(0, i) + "<mark>" + letter + "</mark>" + stam.slice(i + letter.length) + "en";
+}
+
+/* Redenering volgens het werkwoordschema. verberg=true laat de eindvorm open (voor de 2e kans). */
+function redenering(w, mv, verberg) {
+  const l = laatsteLetter(w), kl = kofLetter(w), ja = inKofschip(kl);
+  let s = `<b>${w.infinitief}</b> → ik-vorm: <b>${w.ikVorm}</b> → `;
+  if (w.letter) {
+    s += `laatste letter <b>${l}</b>, maar let op! Kijk naar het hele werkwoord: <b>${markeerLetter(w.infinitief, kl)}</b>. De <b>${kl}</b> zit <u>niet</u> in 't kofschip → `;
+  } else if (l === "i" || l === "o") {
+    s += `laatste letter <b>${l}</b>. De ${l} is grijs in 't kofschip en telt niet mee → `;
+  } else {
+    s += `laatste letter is <b>${l}</b>, en die zit ${ja ? "" : "<u>niet</u> "}in 't kofschip → `;
+  }
+  s += `${w.ikVorm} + <b>${uitgangVol(w, mv)}</b> <small>(${mv ? "meervoud → ten/den" : "enkelvoud → te/de"})</small>`;
+  s += verberg ? ` → <b>?</b>` : ` → <b class="antwoord">${vorm(w, mv)}</b>`;
+  if (w.uitleg) s += `<br>💡 ${w.uitleg}`;
+  return s;
+}
+
+/* Foute vormen voor 'Kies' en 'Foutenjacht' (bewust fout, dus mag gegenereerd). */
+function fouteVormen(w, mv) {
+  const goed = vorm(w, mv);
+  const ander = w.uitgang === "te" ? "de" : "te";
+  const set = new Set();
+  set.add(w.ikVorm + ander + (mv ? "n" : ""));                               // te <-> de
+  const l = laatsteLetter(w);
+  if (l === "t" || l === "d") set.add(w.ikVorm.slice(0, -1) + uitgangVol(w, mv)); // één t/d te weinig
+  if (w.letter) set.add(w.ikVorm + "te" + (mv ? "n" : ""));                  // reiste (klassieke fout)
+  set.add(vorm(w, !mv));                                                      // enkelvoud/meervoud verwisseld
+  set.delete(goed);
+  return [...set];
+}
+
+/* ---------- Tests ---------- */
+function spotAanTests() {
+  const res = [];
+  const ok = (naam, v) => res.push({ test: naam, ok: !!v });
+  const G = (inf) => WOORDBOEK[inf];
+  ok("kletsen → kletste", isGoed("kletste", G("kletsen"), false));
+  ok("groeten → groette", isGoed("groette", G("groeten"), false));
+  ok("praten → praatten (mv)", isGoed("praatten", G("praten"), true));
+  ok("fietsen → fietsten (mv)", isGoed("fietsten", G("fietsen"), true));
+  ok("wonen → woonde", isGoed("woonde", G("wonen"), false));
+  ok("reizen → reisde", isGoed("reisde", G("reizen"), false));
+  ok("reiste is fout", !isGoed("reiste", G("reizen"), false));
+  ok("hoofdletters/spaties genegeerd", isGoed("  Fiets Ten ", G("fietsen"), true));
+  ok("lege invoer is niet goed (en crasht niet)", !isGoed("", G("fietsen"), true) && !isGoed(null, G("fietsen"), true));
+  ok("lach → ch", laatsteLetter(G("lachen")) === "ch");
+  ok("gooien → i telt niet → de", !inKofschip(kofLetter(G("gooien"))));
+  ok("minstens 80 werkwoorden", WOORDEN.length >= 80);
+  // Consistentie van de hele lijst: controleert de handgeschreven vormen tegen de regel
+  const fouten = [];
+  const namen = new Set();
+  WOORDEN.forEach(w => {
+    if (namen.has(w.infinitief)) fouten.push(w.infinitief + ": dubbel");
+    namen.add(w.infinitief);
+    const verwacht = inKofschip(kofLetter(w)) ? "te" : "de";
+    if (w.uitgang !== verwacht) fouten.push(w.infinitief + ": uitgang " + w.uitgang + " ≠ " + verwacht);
+    if (w.verledenTijdEnkelvoud !== w.ikVorm + w.uitgang) fouten.push(w.infinitief + ": enkelvoud");
+    if (w.verledenTijdMeervoud !== w.ikVorm + w.uitgang + "n") fouten.push(w.infinitief + ": meervoud");
+    if (!w.infinitief.endsWith("en")) fouten.push(w.infinitief + ": geen -en");
+    if (w.letter && w.infinitief.slice(-3, -2) !== w.letter) fouten.push(w.infinitief + ": letter klopt niet");
+    if (w.niveau === 1 && w.uitgang !== "te") fouten.push(w.infinitief + ": niveau 1 mag alleen te");
+    if (!w.zinnen || !w.zinnen.length) fouten.push(w.infinitief + ": geen zin");
+    (w.zinnen || []).forEach(z => { if ((z.zin.match(/___/g) || []).length !== 1) fouten.push(w.infinitief + ": zin zonder (één) ___"); });
+    if (fouteVormen(w, false).includes(vorm(w, false)) || fouteVormen(w, true).includes(vorm(w, true))) fouten.push(w.infinitief + ": foute vorm = goede vorm");
+  });
+  VERHALEN.forEach((v, i) => (v.tekst.match(/\{([^}|]+)\|(ev|mv)\}/g) || []).forEach(m => {
+    const inf = m.slice(1).split("|")[0];
+    if (!WOORDBOEK[inf]) fouten.push("verhaal " + (i + 1) + ": onbekend werkwoord " + inf);
+    else if (v.niveau === 1 && WOORDBOEK[inf].niveau !== 1) fouten.push("verhaal " + (i + 1) + ": " + inf + " past niet bij niveau 1");
+  }));
+  ok("woordenlijst consistent" + (fouten.length ? " → " + fouten.join("; ") : ""), fouten.length === 0);
+  [1, 2, 3].forEach(n => ok("niveau " + n + " heeft ≥15 woorden", woordenVoorNiveau(String(n)).length >= 15));
+  return res;
+}
+if (typeof module !== "undefined") module.exports = { WOORDEN, VERHALEN, spotAanTests, fouteVormen, redenering };
+</script>
+
+<!-- =============================================================
+     DEEL 2: SPEL, THEMA & ANIMATIES
+     ============================================================= -->
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const kies = a => a[Math.floor(Math.random() * a.length)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- Opslag (altijd met try/catch) ---------- */
+const opslag = {
+  lees(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  schrijf(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* geen opslag: prima */ } }
+};
+const STANDAARD = { niveau: "1", aantal: 10, timer: 0, geluid: true, groot: false, klas: false, teamA: "Team Rood", teamB: "Team Blauw" };
+const inst = Object.assign({}, STANDAARD, opslag.lees("spotAanInstellingen", {}));
+let foutjes = opslag.lees("spotAanFoutjes", []);
+if (!Array.isArray(foutjes)) foutjes = [];
+const bewaarInst = () => opslag.schrijf("spotAanInstellingen", inst);
+function foutjeErbij(inf) { if (!foutjes.includes(inf)) { foutjes.push(inf); opslag.schrijf("spotAanFoutjes", foutjes); } updateFoutjesBtn(); }
+function foutjeEraf(inf) { const i = foutjes.indexOf(inf); if (i >= 0) { foutjes.splice(i, 1); opslag.schrijf("spotAanFoutjes", foutjes); } updateFoutjesBtn(); }
+
+/* ---------- Geluid (Web Audio, geen bestanden) ---------- */
+let actx = null;
+function ctx() {
+  if (!inst.geluid) return null;
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) { return null; }
+  return actx;
+}
+function toon(freq, dur = .15, type = "sine", delay = 0, vol = .15) {
+  const c = ctx(); if (!c) return;
+  const t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .05);
+}
+const geluid = {
+  klik() { toon(660, .06, "triangle", 0, .08); },
+  goed() { [523, 659, 784, 1047].forEach((f, i) => toon(f, .18, "triangle", i * .09, .14)); },
+  fout() { toon(330, .22, "sine", 0, .12); toon(262, .3, "sine", .18, .1); },
+  applaus() {
+    const c = ctx(); if (!c) return;
+    const len = c.sampleRate * 1.4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) { const env = Math.pow(1 - i / len, 1.5); d[i] = (Math.random() * 2 - 1) * env * (Math.random() < .08 ? 1 : .25); }
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = "bandpass"; f.frequency.value = 1800; f.Q.value = .6; g.gain.value = .35;
+    s.buffer = buf; s.connect(f).connect(g).connect(c.destination); s.start();
+  },
+  tik() { toon(1200, .03, "square", 0, .03); }
+};
+
+const rustig = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* ---------- Spotlight ---------- */
+const spot = $("#spot");
+let spotDoel = null;
+function spotOp(elm, straal) {
+  spotDoel = elm || null;
+  if (elm) {
+    const r = elm.getBoundingClientRect(), onder = innerHeight - ($("#spiek").offsetHeight || 0);
+    if (r.top < 70 || r.bottom > onder) elm.scrollIntoView({ block: "center", behavior: rustig ? "auto" : "smooth" });
+  }
+  spot.classList.toggle("rust", !elm);
+  richtSpot(straal);
+}
+function richtSpot(straal) {
+  if (!spotDoel || !document.body.contains(spotDoel)) { spot.style.setProperty("--sr", "2400px"); return; }
+  const r = spotDoel.getBoundingClientRect();
+  spot.style.setProperty("--sx", (r.left + r.width / 2) + "px");
+  spot.style.setProperty("--sy", (r.top + r.height / 2) + "px");
+  spot.style.setProperty("--sr", (straal || Math.max(140, Math.max(r.width, r.height) * .9 + 90)) + "px");
+}
+addEventListener("scroll", () => requestAnimationFrame(() => richtSpot()), { passive: true });
+addEventListener("resize", () => requestAnimationFrame(() => richtSpot()));
+function spotFlikker() { spot.classList.remove("flikker"); void spot.offsetWidth; spot.classList.add("flikker"); }
+
+/* ---------- Effecten ---------- */
+function confetti() {
+  if (rustig) return;
+  const fx = $("#fx"), kleuren = ["#ffcf4a", "#e0435c", "#2fbf71", "#4d8cf5", "#c77dff", "#fff"];
+  for (let i = 0; i < 46; i++) {
+    const c = document.createElement("span");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = kies(kleuren);
+    c.style.setProperty("--d", (1.6 + Math.random() * 1.4) + "s");
+    c.style.setProperty("--dx", (Math.random() * 160 - 80) + "px");
+    c.style.setProperty("--r", (Math.random() * 900 - 450) + "deg");
+    c.style.animationDelay = Math.random() * .3 + "s";
+    fx.appendChild(c);
+    setTimeout(() => c.remove(), 3400);
+  }
+}
+function applaus(tekst) {
+  geluid.goed(); setTimeout(geluid.applaus, 250); confetti();
+  if (rustig) return;
+  const fx = $("#fx");
+  const t = document.createElement("div"); t.className = "applaus-tekst"; t.textContent = tekst || kies(["Bravo!", "Applaus!", "Spot aan!", "Top!", "Sterrenwerk!"]);
+  fx.appendChild(t); setTimeout(() => t.remove(), 1400);
+  for (let i = 0; i < 6; i++) {
+    const k = document.createElement("span"); k.className = "klap"; k.textContent = "👏";
+    k.style.left = (10 + Math.random() * 80) + "vw"; k.style.top = (55 + Math.random() * 25) + "vh";
+    k.style.animationDelay = i * .08 + "s"; fx.appendChild(k); setTimeout(() => k.remove(), 1700);
+  }
+}
+function gordijnOpen() {
+  document.body.classList.add("dicht");
+  void document.body.offsetWidth;
+  setTimeout(() => document.body.classList.remove("dicht"), 60);
+}
+function meld(t) { const m = $("#melder"); m.textContent = ""; setTimeout(() => m.textContent = t.replace(/<[^>]+>/g, ""), 30); }
+
+/* ---------- Lampjes 't kofschip-x ---------- */
+function lampenHTML() {
+  return KOF_STRIP.map(([toonL, l, actief]) =>
+    `<span class="lamp ${actief ? "" : "grijs"}" data-l="${l}" aria-label="${actief ? "letter " + l : "grijze letter " + l + ", telt niet mee"}">${toonL}</span>`).join("");
+}
+function lampAan(letter) {
+  $$(".lamp").forEach(x => x.classList.toggle("aan", !!letter && x.dataset.l === letter && inKofschip(letter)));
+}
+$("#spiekLampen").innerHTML = lampenHTML();
+$("#uitlegLampen").innerHTML = lampenHTML();
+$("#spiekToggle").addEventListener("click", () => {
+  const f = $("#spiek"), dicht = f.classList.toggle("ingeklapt");
+  $("#spiekToggle").setAttribute("aria-expanded", String(!dicht));
+  $("#spiekToggle").textContent = dicht ? "⛵ Spiekstrook ▴" : "⛵ Spiekstrook ▾";
+  opslag.schrijf("spotAanSpiekDicht", dicht);
+});
+if (opslag.lees("spotAanSpiekDicht", false)) $("#spiekToggle").click();
+
+/* ---------- Schermen ---------- */
+function toonScherm(id) {
+  ["home", "uitleg", "spel", "einde"].forEach(s => $("#" + s).hidden = s !== id);
+  $("#stats").hidden = id !== "spel";
+  lampAan(null); spotOp(null);
+  scrollTo({ top: 0 });
+}
+const NIVEAU_TEKST = {
+  "1": "Niveau 1 – Kennismaken: alleen woorden met te/ten (zoals kletste en groette).",
+  "2": "Niveau 2 – Mix: te/ten én de/den door elkaar.",
+  "3": "Niveau 3 – Expert: lastige woorden, zoals reizen → reisde en antwoorden → antwoordde.",
+  "mix": "Alles door elkaar: alle woorden van niveau 1, 2 en 3."
+};
+function homeNiveau() {
+  const h = $("#homeNiveau");
+  h.innerHTML = [["1", "Niveau 1"], ["2", "Niveau 2"], ["3", "Niveau 3"], ["mix", "Alles mix"]]
+    .map(([v, t]) => `<button class="chip" data-v="${v}" aria-pressed="${inst.niveau === v}">${t}</button>`).join("");
+  $("#niveauUitleg").textContent = NIVEAU_TEKST[inst.niveau];
+}
+$("#homeNiveau").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  inst.niveau = b.dataset.v; bewaarInst(); homeNiveau(); geluid.klik();
+});
+function updateFoutjesBtn() {
+  const b = $("#foutjesBtn");
+  b.textContent = `🔁 Oefen mijn foutjes (${foutjes.length})`;
+  b.disabled = foutjes.length === 0;
+  b.title = foutjes.length ? "" : "Nog geen foutjes bewaard. Goed bezig!";
+}
+
+/* ---------- Instellingen ---------- */
+const OPTIES = {
+  niveau: [["1", "1"], ["2", "2"], ["3", "3"], ["mix", "Mix"]],
+  aantal: [[5, "5"], [10, "10"], [15, "15"]],
+  timer: [[0, "Uit"], [15, "15 sec"], [25, "25 sec"], [40, "40 sec"]],
+  geluid: [[true, "Aan"], [false, "Uit"]],
+  groot: [[false, "Normaal"], [true, "Groot"]],
+  klas: [[false, "Uit"], [true, "Aan"]]
+};
+function vulInst() {
+  $$("#instellingen [data-set]").forEach(div => {
+    const k = div.dataset.set;
+    div.innerHTML = OPTIES[k].map(([v, t], i) => `<button class="chip" data-i="${i}" aria-pressed="${inst[k] === v}">${t}</button>`).join("");
+  });
+  $("#teamA").value = inst.teamA; $("#teamB").value = inst.teamB;
+}
+$("#instellingen").addEventListener("click", e => {
+  const b = e.target.closest("[data-set] button"); if (!b) return;
+  const k = b.parentElement.dataset.set;
+  inst[k] = OPTIES[k][+b.dataset.i][0];
+  bewaarInst(); vulInst(); pasToe(); geluid.klik();
+});
+$("#teamA").addEventListener("input", e => { inst.teamA = e.target.value.trim() || "Team 1"; bewaarInst(); });
+$("#teamB").addEventListener("input", e => { inst.teamB = e.target.value.trim() || "Team 2"; bewaarInst(); });
+$("#openInst").addEventListener("click", () => { vulInst(); $("#instellingen").showModal(); });
+$("#sluitInst").addEventListener("click", () => $("#instellingen").close());
+$("#instellingen").addEventListener("close", () => { homeNiveau(); updateTeams(); });
+$("#wisFoutjes").addEventListener("click", () => { foutjes = []; opslag.schrijf("spotAanFoutjes", foutjes); updateFoutjesBtn(); $("#wisFoutjes").textContent = "🧹 Leeggemaakt ✔"; });
+function pasToe() { document.documentElement.classList.toggle("groot", !!inst.groot); }
+
+/* ---------- Ronde ---------- */
+let R = null;   // huidige ronde
+let timerId = null;
+function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+function startRonde(mode, pool) {
+  stopTimer();
+  const eigenPool = !!pool;
+  pool = pool || woordenVoorNiveau(inst.niveau);
+  R = { mode, idx: 0, score: 0, basis: 0, reeks: 0, besteReeks: 0, eersteKeer: 0, teams: [0, 0], beurt: 0, eigenPool };
+  if (mode === "fouten") {
+    R.items = maakFoutenjacht(inst.niveau, inst.aantal);
+    R.n = R.items.reduce((s, v) => s + v.delen.filter(d => d.fout).length, 0);
+    R.klaarFouten = 0;
+  } else {
+    R.items = shuffle(pool).slice(0, Math.min(inst.aantal, pool.length)).map(w => { const z = kies(w.zinnen); return { w, zin: z.zin, mv: z.mv }; });
+    R.n = R.items.length;
+  }
+  R.max = R.n * 10;
+  toonScherm("spel");
+  updateTeams(); updateStats();
+  gordijnOpen();
+  setTimeout(() => toonItem(), 350);
+}
+function updateStats() {
+  if (!R) return;
+  $("#punten").textContent = R.score;
+  $("#reeks").textContent = R.reeks;
+  const pct = Math.min(100, Math.round(R.basis / R.max * 100));
+  $("#meterFill").style.width = pct + "%";
+  $$(".meter .mark").forEach((m, i) => m.classList.toggle("aan", pct >= [40, 65, 88][i]));
+  const nu = R.mode === "fouten" ? `Fout ${Math.min(R.klaarFouten + 1, R.n)}/${R.n}` : `Woord ${Math.min(R.idx + 1, R.n)}/${R.n}`;
+  $("#voortgangPill").textContent = nu;
+}
+function updateTeams() {
+  const t = $("#teams");
+  t.hidden = !(inst.klas && R);
+  if (t.hidden) return;
+  t.innerHTML = `<span class="team a ${R.beurt === 0 ? "beurt" : ""}">${esc(inst.teamA)}: ${R.teams[0]}</span>
+                 <span class="team b ${R.beurt === 1 ? "beurt" : ""}">${esc(inst.teamB)}: ${R.teams[1]}</span>`;
+}
+function beurtBanner() {
+  if (!inst.klas) return "";
+  const naam = R.beurt === 0 ? inst.teamA : inst.teamB;
+  return `<div class="beurtbanner">Aan de beurt: <span style="background:${R.beurt === 0 ? "#b3122e" : "#2e6fd8"}">${esc(naam)}</span></div>`;
+}
+/* Punten: 10 in één keer goed, 5 bij de tweede poging, reeks-bonus vanaf 3 op rij. */
+function scoor(poging, inf) {
+  let p = 0, bonus = 0;
+  if (poging === 1) { p = 10; R.reeks++; R.eersteKeer++; if (R.reeks >= 3) bonus = 2; if (inf) foutjeEraf(inf); }
+  else { R.reeks = 0; if (poging === 2) p = 5; if (inf) foutjeErbij(inf); }
+  R.besteReeks = Math.max(R.besteReeks, R.reeks);
+  R.basis += p; R.score += p + bonus;
+  if (inst.klas) R.teams[R.beurt] += p + bonus;
+  updateStats(); updateTeams();
+  return { p, bonus };
+}
+function puntenTekst({ p, bonus }) {
+  if (!p) return "";
+  return ` <b>+${p} punten</b>${bonus ? ` 🔥 reeks-bonus <b>+${bonus}</b>` : ""}`;
+}
+function volgendeBeurt() { if (inst.klas) { R.beurt ^= 1; updateTeams(); } }
+
+function zinHTML(it, ingevuld) {
+  const [voor, na] = it.zin.split("___");
+  const gat = ingevuld
+    ? `<span class="gat gevuld" id="gat">${esc(ingevuld)}</span>`
+    : `<span class="gat" id="gat" aria-label="open plek">&nbsp;</span> <span class="inf">(${it.w.infinitief})</span>`;
+  return `<p class="zin">${esc(voor)}${gat}${esc(na)}</p>`;
+}
+function volgendeKnop(tekst = "Volgende ▶") {
+  return `<div class="rij midden" style="margin-top:1rem"><button class="btn groen" id="volgende">${tekst}</button></div>`;
+}
+function bindVolgende(fn) {
+  const b = $("#volgende"); if (!b) return;
+  b.addEventListener("click", () => { geluid.klik(); fn(); });
+  setTimeout(() => b.focus(), 50);
+}
+function naarVolgende() {
+  stopTimer();
+  volgendeBeurt();
+  R.idx++;
+  if (R.idx >= R.items.length) return eindeRonde();
+  updateStats();
+  toonItem();
+}
+function toonItem() {
+  lampAan(null);
+  const it = R.items[R.idx];
+  if (R.mode === "stap") return itemStap(it);
+  if (R.mode === "snel") return itemSnel(it);
+  if (R.mode === "kies") return itemKies(it);
+  if (R.mode === "fouten") return itemFouten(it);
+}
+
+/* ============ MODUS 1: STAP VOOR STAP ============ */
+const BEDRIJVEN = ["Persoonsvorm?", "Ik-vorm", "'t kofschip-x", "Uitgang", "Hele woord"];
+function itemStap(it) {
+  const host = $("#spel");
+  host.innerHTML = `<div class="kaart">${beurtBanner()}<div class="voortgang"><span>🎬 Stap voor stap</span><span>Woord ${R.idx + 1} van ${R.n}</span></div><div id="stapHost"></div></div>`;
+  stapVoorStap($("#stapHost"), it, fouten => {
+    const res = scoor(fouten === 0 ? 1 : 2, it.w.infinitief);
+    const fb = $("#stapEinde");
+    fb.innerHTML = `<span class="goed">✅ ${fouten === 0 ? "Foutloos gespeeld!" : "Goed gedaan, je hebt het hele schema doorlopen!"}${puntenTekst(res)}</span>`;
+    if (fouten === 0) applaus(); else { geluid.goed(); confetti(); }
+    fb.insertAdjacentHTML("beforeend", volgendeKnop(R.idx + 1 >= R.n ? "Naar de eindshow ▶" : "Volgende woord ▶"));
+    bindVolgende(naarVolgende);
+  });
+}
+
+/* Herbruikbaar werkwoordschema in 5 bedrijven.
+   klaar(fouten) wordt aangeroepen na bedrijf 5. Ook gebruikt als "reddingsactie" in andere modi. */
+function stapVoorStap(host, it, klaar) {
+  const w = it.w, mv = it.mv;
+  let fouten = 0, bedrijf = 0;
+  host.innerHTML = `
+    <div class="bedrijven" aria-hidden="true">${BEDRIJVEN.map((b, i) => `<span data-b="${i}">${i + 1}. ${b}</span>`).join("")}</div>
+    <div id="stapZin">${zinHTML(it)}</div>
+    <div id="bedrijf" aria-live="polite"></div>
+    <div class="fb" id="stapEinde"></div>`;
+  const B = host.querySelector("#bedrijf");
+  const zet = n => {
+    bedrijf = n;
+    host.querySelectorAll(".bedrijven span").forEach((s, i) => { s.classList.toggle("nu", i === n); s.classList.toggle("klaar", i < n); });
+  };
+  const titel = (n, t) => `<h2>Bedrijf ${n} van 5: ${t}</h2>`;
+  const fbDiv = () => `<div class="fb" id="bfb"></div>`;
+  const zegFout = (html) => { fouten++; geluid.fout(); spotFlikker(); B.querySelector("#bfb").innerHTML = `<span class="fout">💡 ${html}</span>`; meld(html); };
+  const zegGoed = (html, verder) => {
+    geluid.goed();
+    B.querySelector("#bfb").innerHTML = `<span class="goed">✅ ${html}</span>
+      <div class="rij" style="margin-top:.6rem"><button class="btn groen" id="bverder">Verder ▶</button></div>`;
+    meld(html);
+    const k = B.querySelector("#bverder");
+    k.addEventListener("click", () => { geluid.klik(); verder(); });
+    setTimeout(() => k.focus(), 40);
+  };
+  const toonAntwoordNa2 = (pogingen, html, verder) => {
+    if (pogingen >= 2) {
+      B.querySelector("#bfb").insertAdjacentHTML("beforeend", `<div class="rij" style="margin-top:.6rem"><span class="info" style="flex:1">🎭 De voorstelling gaat door! ${html}</span><button class="btn groen" id="bverder">Verder ▶</button></div>`);
+      const k = B.querySelector("#bverder"); k.addEventListener("click", verder); setTimeout(() => k.focus(), 40);
+    }
+  };
+
+  // Bedrijf 1
+  function b1() {
+    zet(0);
+    B.innerHTML = titel(1, "Is het een persoonsvorm?") +
+      `<p>Op de open plek moet een vorm van <b>${w.infinitief}</b>. Is dat woord een <b>persoonsvorm</b>?</p>
+       <div class="rij"><button class="btn groen" data-a="ja">Ja</button><button class="btn licht" data-a="nee">Nee</button></div>` + fbDiv();
+    spotOp(host.querySelector("#gat"));
+    B.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
+      if (b.dataset.a === "ja") zegGoed("Ja! Ik ga verder met het werkwoordschema en gebruik de werkwoordregel:<br><b>persoonsvorm verleden tijd van een zwak werkwoord = ik-vorm + te/de (ten/den)</b>.", b2);
+      else { B.querySelector("#bfb").innerHTML = `<span class="info">🤔 Kijk nog eens: het woord hoort bij <b>${mv ? "meer personen" : "één persoon of ding"}</b> en je kunt de tijd veranderen. Dan is het een persoonsvorm! (In deze voorstelling is het altijd een persoonsvorm.)</span>`; geluid.klik(); }
+    }));
+    setTimeout(() => B.querySelector("[data-a=ja]").focus(), 60);
+  }
+  // Bedrijf 2
+  function b2() {
+    zet(1); let pog = 0;
+    const letters = w.infinitief.split("");
+    B.innerHTML = titel(2, "Wat is de ik-vorm?") +
+      `<p>Ik neem het hele werkwoord <b>${w.infinitief}</b> en haal er <b>-en</b> af. Typ het, of tik de letters aan.</p>
+       <div class="tegels" aria-label="Letters">${letters.map(l => `<button class="tegel" data-l="${l}" aria-label="letter ${l}">${l}</button>`).join("")}
+         <button class="tegel" data-wis aria-label="laatste letter wissen">⌫</button></div>
+       <div class="rij"><span style="font-size:1.4rem">ik</span><input class="invoer" id="ikIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="ik-vorm">
+       <button class="btn" id="ikCheck">Controleer ✔</button></div>` + fbDiv();
+    const inp = B.querySelector("#ikIn");
+    spotOp(inp);
+    B.querySelectorAll(".tegel").forEach(t => t.addEventListener("click", () => {
+      geluid.tik(); inp.value = t.hasAttribute("data-wis") ? inp.value.slice(0, -1) : inp.value + t.dataset.l; inp.focus();
+    }));
+    const check = () => {
+      const v = norm(inp.value);
+      if (!v) { B.querySelector("#bfb").innerHTML = `<span class="info">✏️ Typ eerst de ik-vorm.</span>`; return; }
+      if (v === w.ikVorm) { lampAan(null); return zegGoed(`De ik-vorm is: <b>ik ${w.ikVorm}</b>.`, b3); }
+      pog++;
+      const kaal = w.infinitief.slice(0, -2);
+      let tip = `Haal <b>-en</b> van ${w.infinitief} af en zeg het hardop: “ik …”.`;
+      if (v === w.infinitief) tip = `Dat is het hele werkwoord. Haal er nog <b>-en</b> af.`;
+      else if (v === kaal && w.letter) tip = `Bijna! Een ik-vorm eindigt nooit op een ${w.letter}. Van de ${w.letter} maak je een ${w.letter === "z" ? "s" : "f"}.`;
+      else if (v === kaal && kaal.slice(-1) === kaal.slice(-2, -1)) tip = `Bijna! Aan het eind schrijf je geen twee dezelfde medeklinkers.`;
+      else if (v === kaal) tip = `Bijna! Zeg het hardop. Hoor je een lange klank? Dan schrijf je twee klinkers.`;
+      zegFout(tip);
+      toonAntwoordNa2(pog, `De ik-vorm is: <b>ik ${w.ikVorm}</b>.`, () => { inp.value = w.ikVorm; b3(); });
+    };
+    B.querySelector("#ikCheck").addEventListener("click", check);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+    setTimeout(() => inp.focus(), 60);
+  }
+  // Bedrijf 3
+  function b3() {
+    zet(2); let pog = 0;
+    const l = laatsteLetter(w), kl = kofLetter(w), ja = inKofschip(kl);
+    const delen = l === "ch" ? [...w.ikVorm.slice(0, -2).split(""), "ch"] : w.ikVorm.split("");
+    B.innerHTML = titel(3, "'t kofschip-x!") +
+      `<div class="woordtegels" aria-label="ik-vorm ${w.ikVorm}">${delen.map((d, i) => `<span class="${i === delen.length - 1 ? "laatste" : ""}">${d}</span>`).join("")}</div>
+       <div class="lampen" id="b3lampen">${lampenHTML()}</div>
+       ${w.letter ? `<p class="info" style="background:#fff3c4;border-radius:10px;padding:.5rem .8rem">⚠️ Let op, expert! Kijk ook naar het hele werkwoord: <b>${markeerLetter(w.infinitief, kl)}</b></p>` : ""}
+       <p>Staat de laatste letter <b>${w.letter ? kl : l}</b> in 't kofschip-x?</p>
+       <div class="rij"><button class="btn groen" data-a="ja">Ja</button><button class="btn licht" data-a="nee">Nee</button></div>` + fbDiv();
+    spotOp(B.querySelector(".woordtegels .laatste"), 110);
+    const uitleg = ja
+      ? `De <b>${kl}</b> zit in 't kofschip! Dus: ik-vorm + <b>te(n)</b>.`
+      : (kl === "i" || kl === "o")
+        ? `De <b>${kl}</b> is grijs: die telt niet mee. Dus: ik-vorm + <b>de(n)</b>.`
+        : `De <b>${kl}</b> zit <u>niet</u> in 't kofschip. Dus: ik-vorm + <b>de(n)</b>.`;
+    B.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
+      const goed = (b.dataset.a === "ja") === ja;
+      if (goed) {
+        lampAan(kl);
+        if (ja) spotOp(B.querySelector(`#b3lampen .lamp[data-l="${kl}"]`), 90);
+        return zegGoed(uitleg, b4);
+      }
+      pog++;
+      let tip = ja ? `Kijk nog eens goed naar de groene lampjes. Zie je de <b>${kl}</b>?` : `Zoek de <b>${kl}</b> maar eens tussen de groene lampjes…`;
+      if (w.letter) tip = `De <b>${l}</b> zit wel in 't kofschip, máár bij <b>${w.infinitief}</b> hoor je een <b>${kl}</b>. Kijk naar het hele werkwoord!`;
+      if (kl === "i" || kl === "o") tip = `De <b>${kl}</b> staat er wel, maar hij is <b>grijs</b>. Grijze letters tellen niet mee.`;
+      zegFout(tip);
+      toonAntwoordNa2(pog, uitleg, () => { lampAan(kl); b4(); });
+    }));
+  }
+  // Bedrijf 4
+  function b4() {
+    zet(3); let pog = 0;
+    const goed = uitgangVol(w, mv);
+    B.innerHTML = titel(4, "Kies de uitgang") +
+      `<p><b>${w.ikVorm}</b> + … ? Denk aan 't kofschip én aan <b>één</b> (te/de) of <b>meer</b> (ten/den).</p>
+       <div class="opties">${["te", "de", "ten", "den"].map(u => `<button class="btn optie licht" data-u="${u}">${w.ikVorm}<b>${u}</b></button>`).join("")}</div>` + fbDiv();
+    spotOp(host.querySelector("#gat"));
+    B.querySelectorAll("[data-u]").forEach(b => b.addEventListener("click", () => {
+      const u = b.dataset.u;
+      if (u === goed) { b.classList.add("goed-gekozen"); return zegGoed(`${w.ikVorm} + <b>${goed}</b>. ${mv ? "Meervoud" : "Enkelvoud"}, en ${inKofschip(kofLetter(w)) ? "de letter zit in 't kofschip" : "de letter zit niet in 't kofschip"}.`, b5); }
+      pog++; b.classList.add("fout-gekozen");
+      const tdGoed = u[0] === goed[0], nGoed = (u.length === 3) === mv;
+      let tip = !tdGoed ? `Denk aan bedrijf 3: ${inKofschip(kofLetter(w)) ? "de letter zat <b>wel</b> in 't kofschip → t" : "de letter zat <b>niet</b> in 't kofschip → d"}.` : "";
+      if (!nGoed) tip += ` Kijk naar de zin: het gaat over <b>${mv ? "meer personen/dingen → -ten/-den" : "één persoon/ding → -te/-de"}</b>.`;
+      zegFout(tip);
+      toonAntwoordNa2(pog, `Het wordt: ${w.ikVorm} + <b>${goed}</b>.`, b5);
+    }));
+  }
+  // Bedrijf 5
+  function b5() {
+    zet(4); let pog = 0;
+    B.innerHTML = titel(5, "Schrijf het hele woord") +
+      `<p>Schrijf nu de hele persoonsvorm voor in de zin.</p>
+       <div class="rij"><input class="invoer" id="heelIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="hele woord">
+       <button class="btn" id="heelCheck">Controleer ✔</button></div>` + fbDiv();
+    const inp = B.querySelector("#heelIn");
+    spotOp(inp);
+    const af = () => {
+      host.querySelector("#stapZin").innerHTML = zinHTML(it, vorm(w, mv));
+      host.querySelectorAll(".bedrijven span").forEach(s => { s.classList.remove("nu"); s.classList.add("klaar"); });
+      B.innerHTML = `<div class="fb"><span class="info">🎬 <b>De complete redenering:</b><br>${redenering(w, mv)}</span></div>`;
+      spotOp(host.querySelector("#gat"));
+      klaar(fouten);
+    };
+    const check = () => {
+      if (!norm(inp.value)) { B.querySelector("#bfb").innerHTML = `<span class="info">✏️ Typ eerst het woord.</span>`; return; }
+      if (isGoed(inp.value, w, mv)) return af();
+      pog++;
+      zegFout(`Nog niet. Zet de stukjes achter elkaar: <b>${w.ikVorm}</b> + <b>${uitgangVol(w, mv)}</b>.`);
+      if (pog >= 2) toonAntwoordNa2(pog, `Het woord is <b>${vorm(w, mv)}</b>.`, af);
+    };
+    B.querySelector("#heelCheck").addEventListener("click", check);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+    setTimeout(() => inp.focus(), 60);
+  }
+  b1();
+}
+
+/* Reddingsactie: na 2 fouten in een andere modus → leermodus voor dat woord */
+function reddingsactie(it, fbEl) {
+  fbEl.insertAdjacentHTML("beforeend", `<span class="info">🎭 <b>De voorstelling gaat door!</b> We lopen dit woord samen stap voor stap door.</span><div id="redHost" class="kaart" style="margin-top:.8rem;border-color:#b9a6de"></div>`);
+  stapVoorStap($("#redHost"), it, () => {
+    $("#stapEinde").innerHTML = `<span class="goed">✅ Goed zo, nu weet je hoe het werkt!</span>` + volgendeKnop(R.idx + 1 >= R.n ? "Naar de eindshow ▶" : "Volgende ▶");
+    bindVolgende(naarVolgende);
+  });
+}
+
+/* ============ MODUS 2: SNELLE RONDE ============ */
+function itemSnel(it) {
+  let pog = 0, hint = 0, klaar = false;
+  const host = $("#spel");
+  host.innerHTML = `<div class="kaart">${beurtBanner()}
+    <div class="voortgang"><span>🔦 Spot-jacht</span><span>Zin ${R.idx + 1} van ${R.n}</span></div>
+    ${inst.timer ? `<div class="timer" role="progressbar" aria-label="Tijd"><div class="loop" id="tijd"></div></div>` : ""}
+    <p style="margin:.2rem 0">Vul de persoonsvorm in de verleden tijd in.</p>
+    <div id="zinBox">${zinHTML(it)}</div>
+    <div class="rij"><input class="invoer" id="antw" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Jouw antwoord">
+      <button class="btn" id="check">Controleer ✔</button>
+      <button class="btn licht" id="hint">💡 Hint</button></div>
+    <div class="fb" id="fb" aria-live="polite"></div></div>`;
+  const inp = $("#antw"), fb = $("#fb");
+  spotOp($("#gat"));
+  setTimeout(() => inp.focus(), 400);
+
+  const startTijd = () => {
+    stopTimer(); if (!inst.timer || pog > 0) return;
+    let over = inst.timer; const bar = $("#tijd");
+    bar.style.width = "100%";
+    timerId = setInterval(() => {
+      over--; bar.style.width = Math.max(0, over / inst.timer * 100) + "%";
+      if (over <= 0) { stopTimer(); if (!klaar) fout(true); }
+    }, 1000);
+  };
+  const goed = () => {
+    klaar = true; stopTimer();
+    const res = scoor(pog + 1, it.w.infinitief);
+    $("#zinBox").innerHTML = zinHTML(it, vorm(it.w, it.mv));
+    spotOp($("#gat")); lampAan(kofLetter(it.w));
+    applaus();
+    fb.innerHTML = `<span class="goed">✅ ${pog === 0 ? "In één keer goed!" : "Goed zo, tweede kans benut!"}${puntenTekst(res)}<br><small>${redenering(it.w, it.mv)}</small></span>` + volgendeKnop();
+    bindVolgende(naarVolgende);
+  };
+  const fout = (tijdOp) => {
+    pog++; stopTimer(); geluid.fout(); spotFlikker(); lampAan(kofLetter(it.w));
+    if (pog === 1) {
+      fb.innerHTML = `<span class="fout">${tijdOp ? "⏰ De tijd is om! Geen probleem." : "🔁 Bijna! Kijk mee met het schema:"}<br>${redenering(it.w, it.mv, true)}<br><b>Probeer het nog een keer!</b></span>`;
+      meld("Nog een keer proberen");
+      inp.value = ""; inp.focus();
+    } else {
+      klaar = true; scoor(3, it.w.infinitief);
+      $("#check").disabled = $("#hint").disabled = inp.disabled = true;
+      fb.innerHTML = "";
+      reddingsactie(it, fb);
+    }
+  };
+  const check = () => {
+    if (klaar) return;
+    if (!norm(inp.value)) { fb.innerHTML = `<span class="info">✏️ Typ eerst een woord.</span>`; return; }
+    isGoed(inp.value, it.w, it.mv) ? goed() : fout(false);
+  };
+  $("#check").addEventListener("click", check);
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+  $("#hint").addEventListener("click", () => {
+    if (klaar) return;
+    hint++; geluid.klik();
+    const h = hint === 1
+      ? `💡 Hint 1: de ik-vorm is <b>ik ${it.w.ikVorm}</b>.`
+      : `💡 Hint 2: het wordt <b>${it.w.uitgang}${it.mv ? "n" : ""}</b> (${inKofschip(kofLetter(it.w)) ? "de letter zit in 't kofschip" : "de letter zit niet in 't kofschip"}${it.w.letter ? `, let op de ${it.w.letter} in ${it.w.infinitief}` : ""}).`;
+    fb.insertAdjacentHTML("beforeend", `<span class="info">${h}</span>`);
+    if (hint === 2) { $("#hint").disabled = true; lampAan(kofLetter(it.w)); }
+    inp.focus();
+  });
+  startTijd();
+}
+
+/* ============ MODUS 3: KIES DE JUISTE SPELLING ============ */
+function itemKies(it) {
+  let pog = 0, klaar = false;
+  const w = it.w, goedV = vorm(w, it.mv);
+  const opties = shuffle([goedV, ...shuffle(fouteVormen(w, it.mv)).slice(0, 2)]);
+  const host = $("#spel");
+  host.innerHTML = `<div class="kaart">${beurtBanner()}
+    <div class="voortgang"><span>🎟️ Kies de juiste spelling</span><span>Zin ${R.idx + 1} van ${R.n}</span></div>
+    <p style="margin:.2rem 0">Welke spelling mag het podium op?</p>
+    <div id="zinBox">${zinHTML(it)}</div>
+    <div class="opties">${opties.map(o => `<button class="btn optie licht" data-o="${esc(o)}">${esc(o)}</button>`).join("")}</div>
+    <div class="rij midden"><button class="btn licht" id="hint">💡 Hint</button></div>
+    <div class="fb" id="fb" aria-live="polite"></div></div>`;
+  const fb = $("#fb");
+  let hint = 0;
+  spotOp($("#gat"));
+  $$(".optie").forEach(b => b.addEventListener("click", () => {
+    if (klaar || b.disabled) return;
+    if (b.dataset.o === goedV) {
+      klaar = true; b.classList.add("goed-gekozen");
+      const res = scoor(pog + 1, w.infinitief);
+      $("#zinBox").innerHTML = zinHTML(it, goedV); spotOp($("#gat")); lampAan(kofLetter(w));
+      applaus();
+      $$(".optie").forEach(x => x.disabled = true); $("#hint").disabled = true;
+      fb.innerHTML = `<span class="goed">✅ Ja! <b>${esc(goedV)}</b> is goed.${puntenTekst(res)}<br><small>${redenering(w, it.mv)}</small></span>` + volgendeKnop();
+      bindVolgende(naarVolgende);
+      return;
+    }
+    pog++; b.classList.add("fout-gekozen"); b.disabled = true; geluid.fout(); spotFlikker(); lampAan(kofLetter(w));
+    if (pog === 1) {
+      fb.innerHTML = `<span class="fout">🔁 <b>${esc(b.dataset.o)}</b> mag nog niet op het podium. Kijk mee:<br>${redenering(w, it.mv, true)}<br><b>Kies nog een keer!</b></span>`;
+      meld("Kies nog een keer");
+    } else {
+      klaar = true; scoor(3, w.infinitief);
+      $$(".optie").forEach(x => x.disabled = true); $("#hint").disabled = true;
+      fb.innerHTML = ""; reddingsactie(it, fb);
+    }
+  }));
+  $("#hint").addEventListener("click", () => {
+    hint++; geluid.klik();
+    fb.insertAdjacentHTML("beforeend", `<span class="info">${hint === 1 ? `💡 Hint 1: de ik-vorm is <b>ik ${w.ikVorm}</b>.` : `💡 Hint 2: het wordt <b>${uitgangVol(w, it.mv)}</b>.`}</span>`);
+    if (hint >= 2) { $("#hint").disabled = true; lampAan(kofLetter(w)); }
+  });
+}
+
+/* ============ MODUS 4: FOUTENJACHT ============ */
+function maakFoutenjacht(niv, n) {
+  const pool = shuffle(verhalenVoorNiveau(niv));
+  const k = Math.max(1, Math.min(pool.length, Math.ceil(n / 3)));
+  const gekozen = pool.slice(0, k);
+  let over = n;
+  return gekozen.map((v, i) => {
+    const delen = [];
+    const re = /\{([^}|]+)\|(ev|mv)\}/g;
+    let m, last = 0;
+    while ((m = re.exec(v.tekst))) {
+      if (m.index > last) delen.push({ tekst: v.tekst.slice(last, m.index) });
+      delen.push({ w: WOORDBOEK[m[1]], mv: m[2] === "mv" });
+      last = re.lastIndex;
+    }
+    if (last < v.tekst.length) delen.push({ tekst: v.tekst.slice(last) });
+    const ww = delen.filter(d => d.w);
+    const aantal = Math.max(1, Math.min(ww.length - 1, Math.ceil(over / (k - i))));
+    over -= aantal;
+    shuffle(ww).slice(0, aantal).forEach(d => { d.fout = true; d.getoond = kies(fouteVormen(d.w, d.mv)); });
+    ww.forEach(d => { if (!d.fout) d.getoond = vorm(d.w, d.mv); });
+    return { delen };
+  });
+}
+function itemFouten(verhaal) {
+  const host = $("#spel");
+  const totaal = verhaal.delen.filter(d => d.fout).length;
+  let hint = 0, actief = null;
+  const woordKnop = (t, extra = "") => `<button class="woord" ${extra}>${esc(t)}</button>`;
+  const tekstHTML = () => verhaal.delen.map((d, i) => {
+    if (d.w) {
+      const cls = d.klaar === "goed" ? "verbeterd" : d.klaar === "getoond" ? "getoond" : "";
+      const label = d.klaar ? `verbeterd: ${vorm(d.w, d.mv)}` : d.getoond;
+      return `<button class="woord ${cls}" data-i="${i}" aria-label="${esc(label)}">${esc(d.klaar ? vorm(d.w, d.mv) : d.getoond)}</button>`;
+    }
+    return d.tekst.split(/(\s+)/).map(s => /^\s+$/.test(s) || !s ? s : woordKnop(s, `data-gewoon`)).join("");
+  }).join("");
+  host.innerHTML = `<div class="kaart">${beurtBanner()}
+    <div class="voortgang"><span>🕵️ Foutenjacht – tekst ${R.idx + 1} van ${R.items.length}</span><span id="fGevonden"></span></div>
+    <p style="margin:.2rem 0">In deze tekst staan <b>${totaal}</b> fout${totaal === 1 ? "" : "en"} bij de werkwoorden in de verleden tijd. Klik op een fout en verbeter hem!</p>
+    <div class="verhaal" id="verhaal"></div>
+    <div class="rij" style="margin-top:.6rem"><button class="btn licht" id="hint">🔦 Hint</button></div>
+    <div id="fixBox"></div>
+    <div class="fb" id="fb" aria-live="polite"></div></div>`;
+  const tekenOpnieuw = () => {
+    $("#verhaal").innerHTML = tekstHTML();
+    const gevonden = verhaal.delen.filter(d => d.fout && d.klaar).length;
+    $("#fGevonden").textContent = `Gevonden: ${gevonden}/${totaal}`;
+  };
+  tekenOpnieuw();
+  spotOp($("#verhaal"));
+
+  $("#verhaal").addEventListener("click", e => {
+    const b = e.target.closest(".woord"); if (!b) return;
+    const fb = $("#fb");
+    if (b.hasAttribute("data-gewoon")) { geluid.klik(); fb.innerHTML = `<span class="info">👀 “${esc(b.textContent.replace(/[.,!?;:]+$/, ""))}” is goed zo. Zoek de fouten in de <b>werkwoorden in de verleden tijd</b>.</span>`; return; }
+    const d = verhaal.delen[+b.dataset.i];
+    if (d.klaar) return;
+    if (!d.fout) { geluid.klik(); fb.innerHTML = `<span class="info">✔ <b>${esc(d.getoond)}</b> is een persoonsvorm in de verleden tijd, en hij is goed gespeld! Zoek verder.</span>`; return; }
+    openFix(+b.dataset.i);
+  });
+
+  function openFix(i) {
+    const d = verhaal.delen[i]; actief = i;
+    let pog = d.pog || 0;
+    $$(".woord.actief").forEach(x => x.classList.remove("actief"));
+    const knop = $(`#verhaal [data-i="${i}"]`); knop.classList.add("actief"); spotOp(knop, 120);
+    geluid.goed();
+    $("#fb").innerHTML = "";
+    $("#fixBox").innerHTML = `<div class="fb"><span class="info">🔦 <b>Fout gevonden!</b> Hoe schrijf je <b>${esc(d.getoond)}</b> goed? <small>(hele werkwoord: ${d.w.infinitief})</small>
+      <div class="rij" style="margin-top:.5rem"><input class="invoer" id="fixIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Verbeterd woord">
+      <button class="btn" id="fixCheck">Verbeter ✔</button></div></span></div>`;
+    const inp = $("#fixIn"); setTimeout(() => inp.focus(), 60);
+    const check = () => {
+      if (!norm(inp.value)) return;
+      if (isGoed(inp.value, d.w, d.mv)) {
+        d.klaar = "goed";
+        const res = scoor(pog + 1, d.w.infinitief);
+        klaarMet(`<span class="goed">✅ Verbeterd: <b>${vorm(d.w, d.mv)}</b>!${puntenTekst(res)}<br><small>${redenering(d.w, d.mv)}</small></span>`, true);
+        return;
+      }
+      pog++; d.pog = pog; geluid.fout(); spotFlikker(); lampAan(kofLetter(d.w));
+      if (pog === 1) {
+        $("#fb").innerHTML = `<span class="fout">🔁 Nog niet helemaal. Kijk mee:<br>${redenering(d.w, d.mv, true)}<br><b>Probeer het nog een keer!</b></span>`;
+        inp.value = ""; inp.focus();
+      } else {
+        d.klaar = "getoond"; scoor(3, d.w.infinitief);
+        klaarMet(`<span class="info">🎭 <b>De voorstelling gaat door!</b> Zo schrijf je het:<br>${redenering(d.w, d.mv)}</span>`, false);
+      }
+    };
+    $("#fixCheck").addEventListener("click", check);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+  }
+  function klaarMet(html, goed) {
+    R.klaarFouten++;
+    $("#fixBox").innerHTML = "";
+    tekenOpnieuw();
+    if (goed) applaus();
+    const rest = verhaal.delen.filter(d => d.fout && !d.klaar).length;
+    const laatste = R.idx + 1 >= R.items.length;
+    $("#fb").innerHTML = html + (rest === 0
+      ? volgendeKnop(laatste ? "Naar de eindshow ▶" : "Volgende tekst ▶")
+      : `<span class="info">🔎 Nog ${rest} fout${rest === 1 ? "" : "en"} te vinden!</span>`);
+    volgendeBeurt();
+    updateStats();
+    if (rest === 0) bindVolgende(() => { stopTimer(); R.idx++; if (R.idx >= R.items.length) return eindeRonde(); toonItem(); });
+    else spotOp($("#verhaal"));
+  }
+  $("#hint").addEventListener("click", () => {
+    const open = verhaal.delen.map((d, i) => ({ d, i })).filter(x => x.d.fout && !x.d.klaar);
+    if (!open.length) return;
+    hint++; geluid.klik();
+    const doel = $(`#verhaal [data-i="${open[0].i}"]`);
+    if (hint % 2 === 1) { spotOp(doel, 260); $("#fb").innerHTML = `<span class="info">🔦 Hint: kijk eens goed in het stukje in de spotlight…</span>`; }
+    else { spotOp(doel, 80); $("#fb").innerHTML = `<span class="info">🔦 Hint: de spot staat nu precies op een fout!</span>`; }
+  });
+}
+
+/* ---------- Einde van de ronde ---------- */
+function eindeRonde() {
+  stopTimer(); lampAan(null);
+  const pct = R.max ? R.basis / R.max : 0;
+  const sterren = pct >= .88 ? 3 : pct >= .65 ? 2 : 1;
+  const alles = R.eersteKeer === R.n;
+  const rol = sterren === 3 && alles ? ["🌟", "Spelling-superster"]
+    : sterren === 3 ? ["🎭", "Hoofdrolspeler"]
+    : sterren === 2 ? ["🎬", "Bijrolspeler"]
+    : ["🎟️", "Beginnend figurant"];
+  const bemoedig = sterren === 1 ? "Elke superster begint als figurant. Oefen je foutjes en speel nog een keer!"
+    : sterren === 2 ? "Mooie voorstelling! Nog even oefenen en jij krijgt de hoofdrol."
+    : "Wat een show! Het publiek staat op de stoelen!";
+  let teamHTML = "";
+  if (inst.klas) {
+    const [a, b] = R.teams;
+    const winnaar = a === b ? "Gelijkspel: allebei een staande ovatie! 👏" : `${esc(a > b ? inst.teamA : inst.teamB)} wint deze voorstelling! 🏆`;
+    teamHTML = `<p style="text-align:center;font-size:1.2rem">${esc(inst.teamA)}: <b>${a}</b> · ${esc(inst.teamB)}: <b>${b}</b><br>${winnaar}</p>`;
+  }
+  toonScherm("einde");
+  $("#einde").innerHTML = `
+    <h1 class="titel">Doek valt… applaus!</h1>
+    <div class="kaart" style="text-align:center">
+      <div class="sterren" aria-label="${sterren} van de 3 sterren">${[1, 2, 3].map(i => `<span class="${i <= sterren ? "" : "leeg"}">⭐</span>`).join("")}</div>
+      <p style="margin:.2rem 0">Jouw rol:</p>
+      <div class="rol">${rol[0]} ${rol[1]}</div>
+      <p>${bemoedig}</p>
+      <p><b>${R.score}</b> punten · <b>${R.eersteKeer}</b> van de ${R.n} in één keer goed · langste reeks 🔥 <b>${R.besteReeks}</b></p>
+      ${teamHTML}
+      <div class="rij midden" style="margin-top:1rem">
+        <button class="btn groen" id="nogEens">🔁 Nog een voorstelling</button>
+        ${foutjes.length ? `<button class="btn rood" id="eindFoutjes">Oefen mijn foutjes (${foutjes.length})</button>` : ""}
+        <button class="btn licht" id="eindHome">🏠 Ander spel kiezen</button>
+      </div>
+    </div>`;
+  applaus(sterren === 3 ? "Staande ovatie!" : "Applaus!");
+  const vorigeMode = R.mode, vorigePool = R.eigenPool;
+  $("#nogEens").addEventListener("click", () => vorigePool ? startFoutjes() : startRonde(vorigeMode));
+  $("#eindHome").addEventListener("click", naarHome);
+  const ef = $("#eindFoutjes"); if (ef) ef.addEventListener("click", startFoutjes);
+  setTimeout(() => $("#nogEens").focus(), 100);
+}
+
+function startFoutjes() {
+  const pool = foutjes.map(f => WOORDBOEK[f]).filter(Boolean);
+  if (!pool.length) return naarHome();
+  startRonde("snel", pool);
+}
+function naarHome() {
+  stopTimer(); R = null; updateTeams();
+  toonScherm("home"); homeNiveau(); updateFoutjesBtn();
+}
+
+/* ---------- Knoppen ---------- */
+$("#modi").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) { geluid.klik(); startRonde(b.dataset.mode); } });
+$("#naarHome").addEventListener("click", () => { gordijnOpen(); naarHome(); });
+$("#naarUitleg").addEventListener("click", () => { toonScherm("uitleg"); spotOp($("#uitleg .schema")); });
+$("#uitlegTerug").addEventListener("click", naarHome);
+$("#foutjesBtn").addEventListener("click", startFoutjes);
+// Lampjes in de uitleg: tik = spot aan
+$("#uitlegLampen").addEventListener("click", e => { const l = e.target.closest(".lamp"); if (l) { lampAan(l.dataset.l); spotOp(l, 80); geluid.tik(); } });
+
+/* ---------- Start ---------- */
+pasToe(); homeNiveau(); updateFoutjesBtn(); toonScherm("home");
+setTimeout(() => document.body.classList.remove("dicht"), 300);
+
+/* Tests draaien altijd stil in de console; met ?test ook op het scherm. */
+const uitslag = spotAanTests();
+console.groupCollapsed("Spot aan – tests: " + uitslag.filter(t => t.ok).length + "/" + uitslag.length + " geslaagd");
+console.table(uitslag); console.groupEnd();
+if (/[?&]test/.test(location.search)) {
+  $("#home").insertAdjacentHTML("afterbegin", `<div class="kaart"><h2>🧪 Tests</h2><ul>${uitslag.map(t => `<li>${t.ok ? "✅" : "❌"} ${esc(t.test)}</li>`).join("")}</ul></div>`);
+}
+})();
+</script>
+</body>
+</html>
