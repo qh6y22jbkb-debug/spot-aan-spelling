@@ -37,9 +37,6 @@
 =====================================================================
 -->
 <style>
-@property --sx { syntax: '<length>'; inherits: true; initial-value: 500px; }
-@property --sy { syntax: '<length>'; inherits: true; initial-value: 300px; }
-@property --sr { syntax: '<length>'; inherits: true; initial-value: 2000px; }
 
 :root {
   --bg: #170d24;
@@ -146,20 +143,6 @@ main#stage {
 .gordijn.rechts { right: 0; transform: translateX(100%); }
 body.dicht .gordijn { transform: translateX(0); transition: none; }
 
-/* Spotlight overlay */
-#spot {
-  position: fixed; inset: 0; z-index: 30; pointer-events: none;
-  --sx: 50vw; --sy: 40vh; --sr: 2400px;
-  background: radial-gradient(circle var(--sr) at var(--sx) var(--sy),
-     rgba(255,236,170,.16), rgba(255,236,170,.05) 72%, rgba(8,4,16,.52) 100%);
-  transition: --sx .6s ease, --sy .6s ease, --sr .6s ease, opacity .3s;
-}
-#spot.rust { --sr: 2400px; }
-#spot.flikker { animation: flikker .9s steps(1) 1; }
-@keyframes flikker {
-  0% { opacity: 1; } 15% { opacity: .2; } 30% { opacity: 1; } 45% { opacity: .1; }
-  60% { opacity: 1; background: rgba(8,4,16,.55); } 100% { opacity: 1; }
-}
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden; }
 .confetti { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px;
   animation: val var(--d,2s) linear forwards; }
@@ -325,6 +308,7 @@ footer#spiek {
 .woord.getoond { background: #ffe8cc; color: #8a3a00; font-weight: 700; cursor: default; }
 .woord.getoond::after { content: " ✎"; font-size: .8em; }
 .woord.actief { outline: 3px solid var(--gold); background: #fff3c4; }
+.woord.hint { background: #ffe58a; box-shadow: 0 0 0 3px var(--gold-d); }
 
 /* Einde */
 .sterren { font-size: 3.4rem; text-align: center; letter-spacing: .3rem; }
@@ -364,8 +348,8 @@ dialog legend { font-weight: 700; margin-bottom: .4rem; }
   .optie { min-width: 7em; font-size: 1.25rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gordijn, #spot { transition: none !important; }
-  .schip .vlag, #spot.flikker { animation: none !important; }
+  .gordijn { transition: none !important; }
+  .schip .vlag { animation: none !important; }
 }
 </style>
 </head>
@@ -390,7 +374,6 @@ dialog legend { font-weight: 700; margin-bottom: .4rem; }
 
 <div class="gordijn links" aria-hidden="true"></div>
 <div class="gordijn rechts" aria-hidden="true"></div>
-<div id="spot" class="rust" aria-hidden="true"></div>
 <div id="fx" aria-hidden="true"></div>
 
 <main id="stage">
@@ -899,28 +882,13 @@ const geluid = {
 };
 
 const rustig = matchMedia("(prefers-reduced-motion: reduce)").matches;
-/* ---------- Spotlight ---------- */
-const spot = $("#spot");
-let spotDoel = null;
-function spotOp(elm, straal) {
-  spotDoel = elm || null;
-  if (elm) {
-    const r = elm.getBoundingClientRect(), onder = innerHeight - ($("#spiek").offsetHeight || 0);
-    if (r.top < 70 || r.bottom > onder) elm.scrollIntoView({ block: "center", behavior: rustig ? "auto" : "smooth" });
-  }
-  spot.classList.toggle("rust", !elm);
-  richtSpot(straal);
+/* ---------- In beeld brengen ---------- */
+// Scrollt het element waar het om draait in beeld als het (half) buiten het scherm valt.
+function inBeeld(elm) {
+  if (!elm) return;
+  const r = elm.getBoundingClientRect(), onder = innerHeight - ($("#spiek").offsetHeight || 0);
+  if (r.top < 70 || r.bottom > onder) elm.scrollIntoView({ block: "center", behavior: rustig ? "auto" : "smooth" });
 }
-function richtSpot(straal) {
-  if (!spotDoel || !document.body.contains(spotDoel)) { spot.style.setProperty("--sr", "2400px"); return; }
-  const r = spotDoel.getBoundingClientRect();
-  spot.style.setProperty("--sx", (r.left + r.width / 2) + "px");
-  spot.style.setProperty("--sy", (r.top + r.height / 2) + "px");
-  spot.style.setProperty("--sr", (straal || Math.max(140, Math.max(r.width, r.height) * .9 + 90)) + "px");
-}
-addEventListener("scroll", () => requestAnimationFrame(() => richtSpot()), { passive: true });
-addEventListener("resize", () => requestAnimationFrame(() => richtSpot()));
-function spotFlikker() { spot.classList.remove("flikker"); void spot.offsetWidth; spot.classList.add("flikker"); }
 
 /* ---------- Effecten ---------- */
 function confetti() {
@@ -980,7 +948,7 @@ if (opslag.lees("spotAanSpiekDicht", false)) $("#spiekToggle").click();
 function toonScherm(id) {
   ["home", "uitleg", "spel", "einde"].forEach(s => $("#" + s).hidden = s !== id);
   $("#stats").hidden = id !== "spel";
-  lampAan(null); spotOp(null);
+  lampAan(null);
   scrollTo({ top: 0 });
 }
 const NIVEAU_TEKST = {
@@ -1163,7 +1131,7 @@ function stapVoorStap(host, it, klaar) {
   };
   const titel = (n, t) => `<h2>Bedrijf ${n} van 5: ${t}</h2>`;
   const fbDiv = () => `<div class="fb" id="bfb"></div>`;
-  const zegFout = (html) => { fouten++; geluid.fout(); spotFlikker(); B.querySelector("#bfb").innerHTML = `<span class="fout">💡 ${html}</span>`; meld(html); };
+  const zegFout = (html) => { fouten++; geluid.fout(); B.querySelector("#bfb").innerHTML = `<span class="fout">💡 ${html}</span>`; meld(html); };
   const zegGoed = (html, verder) => {
     geluid.goed();
     B.querySelector("#bfb").innerHTML = `<span class="goed">✅ ${html}</span>
@@ -1186,7 +1154,7 @@ function stapVoorStap(host, it, klaar) {
     B.innerHTML = titel(1, "Is het een persoonsvorm?") +
       `<p>Op de open plek moet een vorm van <b>${w.infinitief}</b>. Is dat woord een <b>persoonsvorm</b>?</p>
        <div class="rij"><button class="btn groen" data-a="ja">Ja</button><button class="btn licht" data-a="nee">Nee</button></div>` + fbDiv();
-    spotOp(host.querySelector("#gat"));
+    inBeeld(host.querySelector("#gat"));
     B.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
       if (b.dataset.a === "ja") zegGoed("Ja! Ik ga verder met het werkwoordschema en gebruik de werkwoordregel:<br><b>persoonsvorm verleden tijd van een zwak werkwoord = ik-vorm + te/de (ten/den)</b>.", b2);
       else { B.querySelector("#bfb").innerHTML = `<span class="info">🤔 Kijk nog eens: het woord hoort bij <b>${mv ? "meer personen" : "één persoon of ding"}</b> en je kunt de tijd veranderen. Dan is het een persoonsvorm! (In deze voorstelling is het altijd een persoonsvorm.)</span>`; geluid.klik(); }
@@ -1204,7 +1172,7 @@ function stapVoorStap(host, it, klaar) {
        <div class="rij"><span style="font-size:1.4rem">ik</span><input class="invoer" id="ikIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="ik-vorm">
        <button class="btn" id="ikCheck">Controleer ✔</button></div>` + fbDiv();
     const inp = B.querySelector("#ikIn");
-    spotOp(inp);
+    inBeeld(inp);
     B.querySelectorAll(".tegel").forEach(t => t.addEventListener("click", () => {
       geluid.tik(); inp.value = t.hasAttribute("data-wis") ? inp.value.slice(0, -1) : inp.value + t.dataset.l; inp.focus();
     }));
@@ -1237,7 +1205,7 @@ function stapVoorStap(host, it, klaar) {
        ${w.letter ? `<p class="info" style="background:#fff3c4;border-radius:10px;padding:.5rem .8rem">⚠️ Let op, expert! Kijk ook naar het hele werkwoord: <b>${markeerLetter(w.infinitief, kl)}</b></p>` : ""}
        <p>Staat de laatste letter <b>${w.letter ? kl : l}</b> in 't kofschip-x?</p>
        <div class="rij"><button class="btn groen" data-a="ja">Ja</button><button class="btn licht" data-a="nee">Nee</button></div>` + fbDiv();
-    spotOp(B.querySelector(".woordtegels .laatste"), 110);
+    inBeeld(B.querySelector(".woordtegels .laatste"));
     const uitleg = ja
       ? `De <b>${kl}</b> zit in 't kofschip! Dus: ik-vorm + <b>te(n)</b>.`
       : (kl === "i" || kl === "o")
@@ -1247,7 +1215,7 @@ function stapVoorStap(host, it, klaar) {
       const goed = (b.dataset.a === "ja") === ja;
       if (goed) {
         lampAan(kl);
-        if (ja) spotOp(B.querySelector(`#b3lampen .lamp[data-l="${kl}"]`), 90);
+        if (ja) inBeeld(B.querySelector(`#b3lampen .lamp[data-l="${kl}"]`));
         return zegGoed(uitleg, b4);
       }
       pog++;
@@ -1265,7 +1233,7 @@ function stapVoorStap(host, it, klaar) {
     B.innerHTML = titel(4, "Kies de uitgang") +
       `<p><b>${w.ikVorm}</b> + … ? Denk aan 't kofschip én aan <b>één</b> (te/de) of <b>meer</b> (ten/den).</p>
        <div class="opties">${["te", "de", "ten", "den"].map(u => `<button class="btn optie licht" data-u="${u}">${w.ikVorm}<b>${u}</b></button>`).join("")}</div>` + fbDiv();
-    spotOp(host.querySelector("#gat"));
+    inBeeld(host.querySelector("#gat"));
     B.querySelectorAll("[data-u]").forEach(b => b.addEventListener("click", () => {
       const u = b.dataset.u;
       if (u === goed) { b.classList.add("goed-gekozen"); return zegGoed(`${w.ikVorm} + <b>${goed}</b>. ${mv ? "Meervoud" : "Enkelvoud"}, en ${inKofschip(kofLetter(w)) ? "de letter zit in 't kofschip" : "de letter zit niet in 't kofschip"}.`, b5); }
@@ -1285,12 +1253,12 @@ function stapVoorStap(host, it, klaar) {
        <div class="rij"><input class="invoer" id="heelIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="hele woord">
        <button class="btn" id="heelCheck">Controleer ✔</button></div>` + fbDiv();
     const inp = B.querySelector("#heelIn");
-    spotOp(inp);
+    inBeeld(inp);
     const af = () => {
       host.querySelector("#stapZin").innerHTML = zinHTML(it, vorm(w, mv));
       host.querySelectorAll(".bedrijven span").forEach(s => { s.classList.remove("nu"); s.classList.add("klaar"); });
       B.innerHTML = `<div class="fb"><span class="info">🎬 <b>De complete redenering:</b><br>${redenering(w, mv)}</span></div>`;
-      spotOp(host.querySelector("#gat"));
+      inBeeld(host.querySelector("#gat"));
       klaar(fouten);
     };
     const check = () => {
@@ -1330,7 +1298,7 @@ function itemSnel(it) {
       <button class="btn licht" id="hint">💡 Hint</button></div>
     <div class="fb" id="fb" aria-live="polite"></div></div>`;
   const inp = $("#antw"), fb = $("#fb");
-  spotOp($("#gat"));
+  inBeeld($("#gat"));
   setTimeout(() => inp.focus(), 400);
 
   const startTijd = () => {
@@ -1346,13 +1314,13 @@ function itemSnel(it) {
     klaar = true; stopTimer();
     const res = scoor(pog + 1, it.w.infinitief);
     $("#zinBox").innerHTML = zinHTML(it, vorm(it.w, it.mv));
-    spotOp($("#gat")); lampAan(kofLetter(it.w));
+    inBeeld($("#gat")); lampAan(kofLetter(it.w));
     applaus();
     fb.innerHTML = `<span class="goed">✅ ${pog === 0 ? "In één keer goed!" : "Goed zo, tweede kans benut!"}${puntenTekst(res)}<br><small>${redenering(it.w, it.mv)}</small></span>` + volgendeKnop();
     bindVolgende(naarVolgende);
   };
   const fout = (tijdOp) => {
-    pog++; stopTimer(); geluid.fout(); spotFlikker(); lampAan(kofLetter(it.w));
+    pog++; stopTimer(); geluid.fout(); lampAan(kofLetter(it.w));
     if (pog === 1) {
       fb.innerHTML = `<span class="fout">${tijdOp ? "⏰ De tijd is om! Geen probleem." : "🔁 Bijna! Kijk mee met het schema:"}<br>${redenering(it.w, it.mv, true)}<br><b>Probeer het nog een keer!</b></span>`;
       meld("Nog een keer proberen");
@@ -1399,20 +1367,20 @@ function itemKies(it) {
     <div class="fb" id="fb" aria-live="polite"></div></div>`;
   const fb = $("#fb");
   let hint = 0;
-  spotOp($("#gat"));
+  inBeeld($("#gat"));
   $$(".optie").forEach(b => b.addEventListener("click", () => {
     if (klaar || b.disabled) return;
     if (b.dataset.o === goedV) {
       klaar = true; b.classList.add("goed-gekozen");
       const res = scoor(pog + 1, w.infinitief);
-      $("#zinBox").innerHTML = zinHTML(it, goedV); spotOp($("#gat")); lampAan(kofLetter(w));
+      $("#zinBox").innerHTML = zinHTML(it, goedV); inBeeld($("#gat")); lampAan(kofLetter(w));
       applaus();
       $$(".optie").forEach(x => x.disabled = true); $("#hint").disabled = true;
       fb.innerHTML = `<span class="goed">✅ Ja! <b>${esc(goedV)}</b> is goed.${puntenTekst(res)}<br><small>${redenering(w, it.mv)}</small></span>` + volgendeKnop();
       bindVolgende(naarVolgende);
       return;
     }
-    pog++; b.classList.add("fout-gekozen"); b.disabled = true; geluid.fout(); spotFlikker(); lampAan(kofLetter(w));
+    pog++; b.classList.add("fout-gekozen"); b.disabled = true; geluid.fout(); lampAan(kofLetter(w));
     if (pog === 1) {
       fb.innerHTML = `<span class="fout">🔁 <b>${esc(b.dataset.o)}</b> mag nog niet op het podium. Kijk mee:<br>${redenering(w, it.mv, true)}<br><b>Kies nog een keer!</b></span>`;
       meld("Kies nog een keer");
@@ -1470,7 +1438,7 @@ function itemFouten(verhaal) {
     <div class="voortgang"><span>🕵️ Foutenjacht – tekst ${R.idx + 1} van ${R.items.length}</span><span id="fGevonden"></span></div>
     <p style="margin:.2rem 0">In deze tekst staan <b>${totaal}</b> fout${totaal === 1 ? "" : "en"} bij de werkwoorden in de verleden tijd. Klik op een fout en verbeter hem!</p>
     <div class="verhaal" id="verhaal"></div>
-    <div class="rij" style="margin-top:.6rem"><button class="btn licht" id="hint">🔦 Hint</button></div>
+    <div class="rij" style="margin-top:.6rem"><button class="btn licht" id="hint">💡 Hint</button></div>
     <div id="fixBox"></div>
     <div class="fb" id="fb" aria-live="polite"></div></div>`;
   const tekenOpnieuw = () => {
@@ -1479,7 +1447,7 @@ function itemFouten(verhaal) {
     $("#fGevonden").textContent = `Gevonden: ${gevonden}/${totaal}`;
   };
   tekenOpnieuw();
-  spotOp($("#verhaal"));
+  inBeeld($("#verhaal"));
 
   $("#verhaal").addEventListener("click", e => {
     const b = e.target.closest(".woord"); if (!b) return;
@@ -1494,8 +1462,8 @@ function itemFouten(verhaal) {
   function openFix(i) {
     const d = verhaal.delen[i]; actief = i;
     let pog = d.pog || 0;
-    $$(".woord.actief").forEach(x => x.classList.remove("actief"));
-    const knop = $(`#verhaal [data-i="${i}"]`); knop.classList.add("actief"); spotOp(knop, 120);
+    $$(".woord.actief, .woord.hint").forEach(x => x.classList.remove("actief", "hint"));
+    const knop = $(`#verhaal [data-i="${i}"]`); knop.classList.add("actief"); inBeeld(knop);
     geluid.goed();
     $("#fb").innerHTML = "";
     $("#fixBox").innerHTML = `<div class="fb"><span class="info">🔦 <b>Fout gevonden!</b> Hoe schrijf je <b>${esc(d.getoond)}</b> goed? <small>(hele werkwoord: ${d.w.infinitief})</small>
@@ -1510,7 +1478,7 @@ function itemFouten(verhaal) {
         klaarMet(`<span class="goed">✅ Verbeterd: <b>${vorm(d.w, d.mv)}</b>!${puntenTekst(res)}<br><small>${redenering(d.w, d.mv)}</small></span>`, true);
         return;
       }
-      pog++; d.pog = pog; geluid.fout(); spotFlikker(); lampAan(kofLetter(d.w));
+      pog++; d.pog = pog; geluid.fout(); lampAan(kofLetter(d.w));
       if (pog === 1) {
         $("#fb").innerHTML = `<span class="fout">🔁 Nog niet helemaal. Kijk mee:<br>${redenering(d.w, d.mv, true)}<br><b>Probeer het nog een keer!</b></span>`;
         inp.value = ""; inp.focus();
@@ -1535,15 +1503,15 @@ function itemFouten(verhaal) {
     volgendeBeurt();
     updateStats();
     if (rest === 0) bindVolgende(() => { stopTimer(); R.idx++; if (R.idx >= R.items.length) return eindeRonde(); toonItem(); });
-    else spotOp($("#verhaal"));
+    else inBeeld($("#verhaal"));
   }
   $("#hint").addEventListener("click", () => {
     const open = verhaal.delen.map((d, i) => ({ d, i })).filter(x => x.d.fout && !x.d.klaar);
     if (!open.length) return;
     hint++; geluid.klik();
     const doel = $(`#verhaal [data-i="${open[0].i}"]`);
-    if (hint % 2 === 1) { spotOp(doel, 260); $("#fb").innerHTML = `<span class="info">🔦 Hint: kijk eens goed in het stukje in de spotlight…</span>`; }
-    else { spotOp(doel, 80); $("#fb").innerHTML = `<span class="info">🔦 Hint: de spot staat nu precies op een fout!</span>`; }
+    if (hint % 2 === 1) { $("#fb").innerHTML = `<span class="info">💡 Hint: er zit een fout bij het werkwoord <b>${open[0].d.w.infinitief}</b>.</span>`; }
+    else { doel.classList.add("hint"); inBeeld(doel); $("#fb").innerHTML = `<span class="info">💡 Hint: het geel gemarkeerde woord is fout. Klik erop!</span>`; }
   });
 }
 
@@ -1603,11 +1571,11 @@ function naarHome() {
 /* ---------- Knoppen ---------- */
 $("#modi").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) { geluid.klik(); startRonde(b.dataset.mode); } });
 $("#naarHome").addEventListener("click", () => { gordijnOpen(); naarHome(); });
-$("#naarUitleg").addEventListener("click", () => { toonScherm("uitleg"); spotOp($("#uitleg .schema")); });
+$("#naarUitleg").addEventListener("click", () => { toonScherm("uitleg"); inBeeld($("#uitleg .schema")); });
 $("#uitlegTerug").addEventListener("click", naarHome);
 $("#foutjesBtn").addEventListener("click", startFoutjes);
-// Lampjes in de uitleg: tik = spot aan
-$("#uitlegLampen").addEventListener("click", e => { const l = e.target.closest(".lamp"); if (l) { lampAan(l.dataset.l); spotOp(l, 80); geluid.tik(); } });
+// Lampjes in de uitleg: tik = lampje aan
+$("#uitlegLampen").addEventListener("click", e => { const l = e.target.closest(".lamp"); if (l) { lampAan(l.dataset.l); inBeeld(l); geluid.tik(); } });
 
 /* ---------- Start ---------- */
 pasToe(); homeNiveau(); updateFoutjesBtn(); toonScherm("home");
