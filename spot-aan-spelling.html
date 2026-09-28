@@ -230,6 +230,7 @@ mark { background: #ffe58a; border-radius: 4px; padding: 0 2px; }
 .optie.fout-gekozen::after { content: " ✗"; }
 .optie.goed-gekozen { background: var(--green-l); box-shadow: 0 5px 0 var(--green); }
 .optie.goed-gekozen::after { content: " ✔"; }
+.optie.goed-gekozen:disabled { opacity: 1; }
 
 .timer { height: 12px; border-radius: 999px; background: #e6dcf5; overflow: hidden; margin: .4rem 0 .8rem; }
 .timer .loop { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green-l), var(--gold)); transition: width 1s linear; }
@@ -1007,10 +1008,20 @@ function pasToe() { document.documentElement.classList.toggle("groot", !!inst.gr
 /* ---------- Ronde ---------- */
 let R = null;   // huidige ronde
 let timerId = null;
+let doorId = null;
 function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+/* Na een goed antwoord automatisch door (kort pauze voor het vinkje en de confetti).
+   Wordt afgebroken als de ronde intussen gestopt is. */
+const DOOR_MS = 1300;
+function autoDoor(fn, ms = DOOR_MS) {
+  clearTimeout(doorId);
+  const ronde = R;
+  doorId = setTimeout(() => { doorId = null; if (R && R === ronde) fn(); }, ms);
+}
+function stopAutoDoor() { clearTimeout(doorId); doorId = null; }
 
 function startRonde(mode, pool) {
-  stopTimer();
+  stopTimer(); stopAutoDoor();
   const eigenPool = !!pool;
   pool = pool || woordenVoorNiveau(inst.niveau);
   R = { mode, idx: 0, score: 0, basis: 0, reeks: 0, besteReeks: 0, eersteKeer: 0, teams: [0, 0], beurt: 0, eigenPool };
@@ -1104,18 +1115,20 @@ const BEDRIJVEN = ["Persoonsvorm?", "Ik-vorm", "'t kofschip-x", "Uitgang", "Hele
 function itemStap(it) {
   const host = $("#spel");
   host.innerHTML = `<div class="kaart">${beurtBanner()}<div class="voortgang"><span>🎬 Stap voor stap</span><span>Woord ${R.idx + 1} van ${R.n}</span></div><div id="stapHost"></div></div>`;
-  stapVoorStap($("#stapHost"), it, fouten => {
+  stapVoorStap($("#stapHost"), it, (fouten, direct) => {
     const res = scoor(fouten === 0 ? 1 : 2, it.w.infinitief);
     const fb = $("#stapEinde");
     fb.innerHTML = `<span class="goed">✅ ${fouten === 0 ? "Foutloos gespeeld!" : "Goed gedaan, je hebt het hele schema doorlopen!"}${puntenTekst(res)}</span>`;
     if (fouten === 0) applaus(); else { geluid.goed(); confetti(); }
+    // Laatste antwoord goed getypt → meteen door. Kwam het antwoord na 2 pogingen van ons? Dan eerst rustig lezen.
+    if (direct) return autoDoor(naarVolgende, 1800);
     fb.insertAdjacentHTML("beforeend", volgendeKnop(R.idx + 1 >= R.n ? "Naar de eindshow ▶" : "Volgende woord ▶"));
     bindVolgende(naarVolgende);
   });
 }
 
 /* Herbruikbaar werkwoordschema in 5 bedrijven.
-   klaar(fouten) wordt aangeroepen na bedrijf 5. Ook gebruikt als "reddingsactie" in andere modi. */
+   klaar(fouten, direct) wordt aangeroepen na bedrijf 5 (direct = laatste woord zelf goed getypt). Ook gebruikt als "reddingsactie" in andere modi. */
 function stapVoorStap(host, it, klaar) {
   const w = it.w, mv = it.mv;
   let fouten = 0, bedrijf = 0;
@@ -1132,14 +1145,12 @@ function stapVoorStap(host, it, klaar) {
   const titel = (n, t) => `<h2>Bedrijf ${n} van 5: ${t}</h2>`;
   const fbDiv = () => `<div class="fb" id="bfb"></div>`;
   const zegFout = (html) => { fouten++; geluid.fout(); B.querySelector("#bfb").innerHTML = `<span class="fout">💡 ${html}</span>`; meld(html); };
-  const zegGoed = (html, verder) => {
+  const zegGoed = (html, verder, ms) => {
     geluid.goed();
-    B.querySelector("#bfb").innerHTML = `<span class="goed">✅ ${html}</span>
-      <div class="rij" style="margin-top:.6rem"><button class="btn groen" id="bverder">Verder ▶</button></div>`;
+    B.querySelector("#bfb").innerHTML = `<span class="goed">✅ ${html}</span>`;
+    B.querySelectorAll("button, input").forEach(x => x.disabled = true);
     meld(html);
-    const k = B.querySelector("#bverder");
-    k.addEventListener("click", () => { geluid.klik(); verder(); });
-    setTimeout(() => k.focus(), 40);
+    autoDoor(verder, ms);
   };
   const toonAntwoordNa2 = (pogingen, html, verder) => {
     if (pogingen >= 2) {
@@ -1156,7 +1167,7 @@ function stapVoorStap(host, it, klaar) {
        <div class="rij"><button class="btn groen" data-a="ja">Ja</button><button class="btn licht" data-a="nee">Nee</button></div>` + fbDiv();
     inBeeld(host.querySelector("#gat"));
     B.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
-      if (b.dataset.a === "ja") zegGoed("Ja! Ik ga verder met het werkwoordschema en gebruik de werkwoordregel:<br><b>persoonsvorm verleden tijd van een zwak werkwoord = ik-vorm + te/de (ten/den)</b>.", b2);
+      if (b.dataset.a === "ja") zegGoed("Ja! Ik ga verder met het werkwoordschema en gebruik de werkwoordregel:<br><b>persoonsvorm verleden tijd van een zwak werkwoord = ik-vorm + te/de (ten/den)</b>.", b2, 2600);
       else { B.querySelector("#bfb").innerHTML = `<span class="info">🤔 Kijk nog eens: het woord hoort bij <b>${mv ? "meer personen" : "één persoon of ding"}</b> en je kunt de tijd veranderen. Dan is het een persoonsvorm! (In deze voorstelling is het altijd een persoonsvorm.)</span>`; geluid.klik(); }
     }));
     setTimeout(() => B.querySelector("[data-a=ja]").focus(), 60);
@@ -1254,19 +1265,19 @@ function stapVoorStap(host, it, klaar) {
        <button class="btn" id="heelCheck">Controleer ✔</button></div>` + fbDiv();
     const inp = B.querySelector("#heelIn");
     inBeeld(inp);
-    const af = () => {
+    const af = (direct) => {
       host.querySelector("#stapZin").innerHTML = zinHTML(it, vorm(w, mv));
       host.querySelectorAll(".bedrijven span").forEach(s => { s.classList.remove("nu"); s.classList.add("klaar"); });
       B.innerHTML = `<div class="fb"><span class="info">🎬 <b>De complete redenering:</b><br>${redenering(w, mv)}</span></div>`;
       inBeeld(host.querySelector("#gat"));
-      klaar(fouten);
+      klaar(fouten, direct === true);
     };
     const check = () => {
       if (!norm(inp.value)) { B.querySelector("#bfb").innerHTML = `<span class="info">✏️ Typ eerst het woord.</span>`; return; }
-      if (isGoed(inp.value, w, mv)) return af();
+      if (isGoed(inp.value, w, mv)) return af(true);
       pog++;
       zegFout(`Nog niet. Zet de stukjes achter elkaar: <b>${w.ikVorm}</b> + <b>${uitgangVol(w, mv)}</b>.`);
-      if (pog >= 2) toonAntwoordNa2(pog, `Het woord is <b>${vorm(w, mv)}</b>.`, af);
+      if (pog >= 2) toonAntwoordNa2(pog, `Het woord is <b>${vorm(w, mv)}</b>.`, () => af(false));
     };
     B.querySelector("#heelCheck").addEventListener("click", check);
     inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
@@ -1316,8 +1327,9 @@ function itemSnel(it) {
     $("#zinBox").innerHTML = zinHTML(it, vorm(it.w, it.mv));
     inBeeld($("#gat")); lampAan(kofLetter(it.w));
     applaus();
-    fb.innerHTML = `<span class="goed">✅ ${pog === 0 ? "In één keer goed!" : "Goed zo, tweede kans benut!"}${puntenTekst(res)}<br><small>${redenering(it.w, it.mv)}</small></span>` + volgendeKnop();
-    bindVolgende(naarVolgende);
+    $("#check").disabled = $("#hint").disabled = inp.disabled = true;
+    fb.innerHTML = `<span class="goed">✅ ${pog === 0 ? "In één keer goed!" : "Goed zo, tweede kans benut!"}${puntenTekst(res)}</span>`;
+    autoDoor(naarVolgende);
   };
   const fout = (tijdOp) => {
     pog++; stopTimer(); geluid.fout(); lampAan(kofLetter(it.w));
@@ -1376,8 +1388,8 @@ function itemKies(it) {
       $("#zinBox").innerHTML = zinHTML(it, goedV); inBeeld($("#gat")); lampAan(kofLetter(w));
       applaus();
       $$(".optie").forEach(x => x.disabled = true); $("#hint").disabled = true;
-      fb.innerHTML = `<span class="goed">✅ Ja! <b>${esc(goedV)}</b> is goed.${puntenTekst(res)}<br><small>${redenering(w, it.mv)}</small></span>` + volgendeKnop();
-      bindVolgende(naarVolgende);
+      fb.innerHTML = `<span class="goed">✅ Ja! <b>${esc(goedV)}</b> is goed.${puntenTekst(res)}</span>`;
+      autoDoor(naarVolgende);
       return;
     }
     pog++; b.classList.add("fout-gekozen"); b.disabled = true; geluid.fout(); lampAan(kofLetter(w));
@@ -1497,12 +1509,14 @@ function itemFouten(verhaal) {
     if (goed) applaus();
     const rest = verhaal.delen.filter(d => d.fout && !d.klaar).length;
     const laatste = R.idx + 1 >= R.items.length;
+    const verder = () => { stopTimer(); R.idx++; if (R.idx >= R.items.length) return eindeRonde(); toonItem(); };
     $("#fb").innerHTML = html + (rest === 0
-      ? volgendeKnop(laatste ? "Naar de eindshow ▶" : "Volgende tekst ▶")
+      ? (goed ? "" : volgendeKnop(laatste ? "Naar de eindshow ▶" : "Volgende tekst ▶"))
       : `<span class="info">🔎 Nog ${rest} fout${rest === 1 ? "" : "en"} te vinden!</span>`);
     volgendeBeurt();
     updateStats();
-    if (rest === 0) bindVolgende(() => { stopTimer(); R.idx++; if (R.idx >= R.items.length) return eindeRonde(); toonItem(); });
+    if (rest === 0 && goed) autoDoor(verder);
+    else if (rest === 0) bindVolgende(verder);
     else inBeeld($("#verhaal"));
   }
   $("#hint").addEventListener("click", () => {
@@ -1564,7 +1578,7 @@ function startFoutjes() {
   startRonde("snel", pool);
 }
 function naarHome() {
-  stopTimer(); R = null; updateTeams();
+  stopTimer(); stopAutoDoor(); R = null; updateTeams();
   toonScherm("home"); homeNiveau(); updateFoutjesBtn();
 }
 
